@@ -1,6 +1,10 @@
 import nodemailer from 'nodemailer';
 
-const smtpHosts = new Map([['gmail.com','smtp.gmail.com'],['meta.ua','smtp.meta.ua']]);
+const smtpHosts = new Map([
+  ['gmail.com','smtp.gmail.com'],
+  ['meta.ua','smtp.meta.ua'],
+  ['ukr.net','smtp.ukr.net'],
+]);
 
 function smtpHost(env) {
   const sender = /^[^\s@]+@([^\s@]+)$/.exec(env.SLX_SMTP_USER ?? '');

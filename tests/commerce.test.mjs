@@ -17,6 +17,8 @@ test('launch mail requires a production sender and an unsubscribe secret', () =>
   assert.equal(launchMailReady(env),true);
   env.SLX_SMTP_USER = 'store@meta.ua';
   assert.equal(launchMailReady(env),true);
+  env.SLX_SMTP_USER = 'store@ukr.net';
+  assert.equal(launchMailReady(env),true);
   assert.equal(launchMailReady({...env,SLX_SMTP_PASSWORD:''}),false);
   assert.equal(launchMailReady({...env,SLX_UNSUBSCRIBE_SECRET:''}),false);
   assert.equal(launchMailReady({...env,VERCEL_ENV:'preview'}),false);
