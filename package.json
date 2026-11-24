@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "check": "node inventory.cjs",
-    "test": "node --test tests/*.test.mjs",
+    "test": "node --test tests/commerce.test.mjs tests/supabase.test.mjs",
     "build": "node build-frontend.cjs",
     "preview": "npm run build && node serve-preview.cjs"
   },

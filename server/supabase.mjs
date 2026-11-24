@@ -1,12 +1,30 @@
 import { Failure, requireThat } from './security.mjs';
 
+export function supabaseConfig(env = process.env) {
+  let address;
+  try {
+    const url = new URL(env.SLX_SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL);
+    if (url.protocol === 'https:' && url.pathname === '/' && !url.username && !url.password && !url.search && !url.hash) {
+      address = url.origin;
+    }
+  } catch {}
+  return {
+    address,
+    authKey: env.SLX_SUPABASE_PUBLISHABLE_KEY || env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || env.SLX_SUPABASE_ANON_KEY,
+    secret: env.SLX_SUPABASE_SECRET_KEY || env.SLX_SUPABASE_SERVICE_ROLE_KEY,
+  };
+}
+
+export const supabaseServerHeaders = key => ({
+  apikey: key,
+  ...(key.startsWith('sb_secret_') ? {} : { Authorization: `Bearer ${key}` }),
+});
+
 export function supabase(env = process.env, fetcher = fetch) {
-  const address = env.SLX_SUPABASE_URL;
-  const authKey = env.SLX_SUPABASE_ANON_KEY;
-  const secret = env.SLX_SUPABASE_SERVICE_ROLE_KEY;
+  const { address, authKey, secret } = supabaseConfig(env);
   const bucket = env.SLX_STORAGE_BUCKET;
   function endpoint(route) {
-    requireThat(address?.startsWith('https://'), 503, 'Supabase ще не налаштовано.');
+    requireThat(address, 503, 'Supabase ще не налаштовано.');
     return new URL(route, address);
   }
   async function auth(route, data) {
@@ -36,7 +54,7 @@ export function supabase(env = process.env, fetcher = fetch) {
     },
     async upload(key, type, bytes) {
       const result = await fetcher(storageURL(key), {
-        method:'POST', headers:{ apikey:secret, Authorization:`Bearer ${secret}`, 'Content-Type':type },
+        method:'POST', headers:{ ...supabaseServerHeaders(secret), 'Content-Type':type },
         body: bytes, redirect:'error', signal:AbortSignal.timeout(12000),
       });
       requireThat(result.ok, 502, 'Не вдалося зберегти зображення.');
@@ -45,7 +63,7 @@ export function supabase(env = process.env, fetcher = fetch) {
       const url = storageURL(key);
       url.pathname = url.pathname.replace('/object/','/object/authenticated/');
       return fetcher(url, {
-        headers:{ apikey:secret, Authorization:`Bearer ${secret}` }, redirect:'error', signal:AbortSignal.timeout(8000),
+        headers:supabaseServerHeaders(secret), redirect:'error', signal:AbortSignal.timeout(8000),
       });
     },
   };

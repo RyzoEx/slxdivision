@@ -1,8 +1,12 @@
 const http = require('node:http');
 const path = require('node:path');
+const { existsSync } = require('node:fs');
 const { readFile } = require('node:fs/promises');
 const { Readable } = require('node:stream');
 const config = require('./vercel.json');
+
+const localEnv = path.join(__dirname,'.env.local');
+if (existsSync(localEnv)) process.loadEnvFile(localEnv);
 
 const output = path.join(__dirname, 'dist');
 const port = Number(process.env.PORT || 4173);

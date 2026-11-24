@@ -1,5 +1,6 @@
 import source from '../content/catalog.json' with { type:'json' };
 import { basisPoints, money, requireThat, text } from './security.mjs';
+import { supabaseConfig } from './supabase.mjs';
 
 export const statuses = ['new','availability_check','awaiting_payment','paid','sent_to_manufacturer','in_production','shipped','delivered','cancelled','returned','defective','unclaimed'];
 const edges = {
@@ -48,8 +49,9 @@ export async function catalog(db) {
 }
 export function readyForSale(config, items, env) {
   const active = items.filter(item => item.status === 'available');
+  const { address, authKey } = supabaseConfig(env);
   return env.SLX_ALLOW_LIVE_ORDERS === '1' && env.VERCEL_ENV === 'production'
-    && Boolean(env.SLX_SUPABASE_URL && env.SLX_SUPABASE_ANON_KEY)
+    && Boolean(address && authKey)
     && config.manufacturer_ready && config.terms_ready && active.length > 0
     && active.every(item => item.price > 0 && item.sizes.length > 0 && item.colors.length > 0);
 }

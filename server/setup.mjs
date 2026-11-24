@@ -1,6 +1,7 @@
 import { openPostgres, migrate } from './db.mjs';
 import { emailAddress } from './security.mjs';
 import { uuid } from './orders.mjs';
+import { supabaseConfig, supabaseServerHeaders } from './supabase.mjs';
 
 const [action,id,email,role] = process.argv.slice(2);
 const db = openPostgres();
@@ -11,11 +12,10 @@ try {
     console.log('SLX private database schema ready.');
   } else if (action==='staff' && uuid(id) && ['owner','manager','operator'].includes(role)) {
     const expected = emailAddress(email);
-    const key = process.env.SLX_SUPABASE_SERVICE_ROLE_KEY;
-    const host = process.env.SLX_SUPABASE_URL;
-    if (!key || !host?.startsWith('https://')) throw new Error('Supabase URL and service role key are required for account verification.');
+    const { secret:key, address:host } = supabaseConfig();
+    if (!key || !host) throw new Error('Supabase URL and server secret key are required for account verification.');
     const response = await fetch(new URL(`/auth/v1/admin/users/${id}`,host), {
-      headers:{apikey:key,Authorization:`Bearer ${key}`},redirect:'error',signal:AbortSignal.timeout(8000),
+      headers:supabaseServerHeaders(key),redirect:'error',signal:AbortSignal.timeout(8000),
     });
     if (!response.ok) throw new Error('Unable to verify the Supabase user.');
     const identity = await response.json();
