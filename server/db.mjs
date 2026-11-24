@@ -9,7 +9,18 @@ export const schemaQuery = sql => sql.replace(/\bslx_(?!private\b)[a-z_]+\b/g, n
 
 export function openPostgres(connectionString = process.env.SLX_DATABASE_URL) {
   if (!connectionString) return null;
-  const pool = new pg.Pool({ connectionString, max: 3, idleTimeoutMillis: 5000, connectionTimeoutMillis: 5000 });
+  const config = { connectionString, max: 3, idleTimeoutMillis: 5000, connectionTimeoutMillis: 5000 };
+  const encodedCa = process.env.SLX_DATABASE_CA_BASE64?.trim();
+  if (encodedCa) {
+    const url = new URL(connectionString);
+    // node-postgres otherwise lets URL SSL parameters replace the supplied CA.
+    for (const option of ['ssl', 'sslmode', 'sslrootcert', 'sslcert', 'sslkey']) {
+      url.searchParams.delete(option);
+    }
+    config.connectionString = url.toString();
+    config.ssl = { ca: Buffer.from(encodedCa, 'base64').toString('utf8'), rejectUnauthorized: true };
+  }
+  const pool = new pg.Pool(config);
   pool.on('error', error => console.error('SLX database connection error:', error.code ?? error.name));
   return {
     query: (sql, values) => pool.query(schemaQuery(sql), values),
