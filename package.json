@@ -1,0 +1,10 @@
+{
+  "name": "slx-after-hours",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "check": "node inventory.cjs",
+    "build": "node build-frontend.cjs",
+    "preview": "npm run build && node serve-preview.cjs"
+  }
+}
