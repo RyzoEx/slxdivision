@@ -4,6 +4,7 @@ import { audit, catalog, changeOrder, collectionsSource, createOrder, listOrders
   referrals, setProduct, setReferral, settings, statuses, updateSettings } from './orders.mjs';
 import { csv, report } from './finance.mjs';
 import { interest, notifyLaunch, unsubscribe } from './interests.mjs';
+import { launchMailReady } from './launch-mail.mjs';
 import { currentUser, Failure, isAdmin, newId, readJson, requireThat, text, throttle } from './security.mjs';
 
 const baseHeaders = { 'Cache-Control':'no-store','X-Robots-Tag':'noindex','X-Content-Type-Options':'nosniff' };
@@ -25,7 +26,7 @@ function exposeOrder(order,user) {
 function adminMetadata(user, config, items, env, auth) {
   return {
     user, statuses, sales:config.sales && readyForSale(config,items,env), modeReady:readyForSale(config,items,env),
-    storageReady:auth.storageReady, canNotify:env.VERCEL_ENV === 'production' && Boolean(env.SLX_EVENT_WEBHOOK && env.SLX_UNSUBSCRIBE_SECRET),
+    storageReady:auth.storageReady, canNotify:launchMailReady(env),
   };
 }
 
@@ -63,11 +64,12 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
         return new Response(file.body,{headers:{'Content-Type':fileTypes[key.split('.').at(-1)].mime,'Cache-Control':'public, max-age=300','X-Content-Type-Options':'nosniff'}});
       }
       if (op === 'account' && get) {
-        if (!user) return json({user:null,orders:[],authReady:auth.authReady});
+        const authReady = auth.authReady && env.SLX_CUSTOMER_OTP_ENABLED === '1';
+        if (!user) return json({user:null,orders:[],authReady});
         const {rows:orders} = await db.query(`SELECT id,status,items,subtotal,created_at,manufacturing->>'tracking' AS tracking,
           (SELECT jsonb_agg(jsonb_build_object('status',status,'at',created_at) ORDER BY id) FROM slx_order_events WHERE order_id=slx_orders.id) AS events
           FROM slx_orders WHERE mode='live' AND user_id=$1 ORDER BY created_at DESC LIMIT 100`,[user.id]);
-        return json({user,orders,authReady:auth.authReady});
+        return json({user,orders,authReady});
       }
 
       const mode = url.searchParams.get('mode') ?? 'test';
@@ -81,7 +83,7 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       }
       if (op === 'admin-products' && get) {
         requireThat(manager(user),403,'Недостатньо прав.');
-        return json({products:await catalog(db),storageReady:auth.storageReady,canNotify:env.VERCEL_ENV === 'production' && Boolean(env.SLX_EVENT_WEBHOOK && env.SLX_UNSUBSCRIBE_SECRET)});
+        return json({products:await catalog(db),storageReady:auth.storageReady,canNotify:launchMailReady(env)});
       }
       if (op === 'admin-collections' && get) {
         requireThat(manager(user),403,'Недостатньо прав.');
@@ -124,6 +126,9 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       const data = await readJson(request,op==='admin-upload' ? 2000000 : undefined);
       const ip = request.headers.get('x-vercel-forwarded-for')?.split(',')[0]?.slice(0,80) || 'local';
       if (op==='login') return json({ok:true},200,{'Set-Cookie':await login(db,auth,data,ip,secure)});
+      if (op==='otp' || op==='verify') {
+        requireThat(auth.authReady && env.SLX_CUSTOMER_OTP_ENABLED === '1',503,'Вхід у кабінет покупця ще не відкрито.');
+      }
       if (op==='otp') { await requestOtp(db,auth,data,ip); return json({ok:true}); }
       if (op==='verify') return json({ok:true},200,{'Set-Cookie':await verifyOtp(db,auth,data,ip,secure)});
       if (op==='logout') return json({ok:true},200,{'Set-Cookie':await logout(db,request,secure)});

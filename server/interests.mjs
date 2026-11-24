@@ -1,6 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { emailAddress, hashToken, newId, requireThat, text, throttle, token } from './security.mjs';
 import { catalog, audit } from './orders.mjs';
+import { launchMail, launchMailReady } from './launch-mail.mjs';
 
 export async function interest(db, data, ip) {
   const email = emailAddress(data.email);
@@ -26,9 +27,8 @@ export async function unsubscribe(db, value) {
 }
 
 export async function notifyLaunch(db, actor, product, env, origin, fetcher = fetch) {
-  const address = env.SLX_EVENT_WEBHOOK;
-  const secret = env.SLX_UNSUBSCRIBE_SECRET;
-  requireThat(env.VERCEL_ENV === 'production' && address?.startsWith('https://') && secret?.length >= 32,503,'Надсилання ще не налаштовано.');
+  requireThat(launchMailReady(env),503,'Надсилання ще не налаштовано.');
+  const deliver = launchMail(env,fetcher);
   const item = (await catalog(db)).find(row => row.id === product && row.status === 'available');
   requireThat(item,409,'Річ має бути доступною перед сповіщенням.');
   const result = {sent:0, failed:0};
@@ -37,17 +37,11 @@ export async function notifyLaunch(db, actor, product, env, origin, fetcher = fe
       (status='pending' OR (status='sending' AND sent_at<now()-interval '10 minutes'))
       ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 8) RETURNING id,email,size,color,delivery_key`,[product])).rows;
   await Promise.all(claims.map(async row => {
-    const value = createHmac('sha256',secret).update(row.delivery_key).digest('base64url');
+    const value = createHmac('sha256',env.SLX_UNSUBSCRIBE_SECRET).update(row.delivery_key).digest('base64url');
     try {
       await db.query("UPDATE slx_interests SET unsubscribe_hash=$2 WHERE id=$1 AND status='sending'",[row.id,hashToken(value)]);
-      const headers = { 'Content-Type':'application/json', 'Idempotency-Key':row.delivery_key };
-      if (env.SLX_EVENT_TOKEN) headers.Authorization = `Bearer ${env.SLX_EVENT_TOKEN}`;
-      const sent = await fetcher(address, {
-        method:'POST', headers, redirect:'error', signal:AbortSignal.timeout(7000),
-        body:JSON.stringify({event:'product.available',id:row.delivery_key,email:row.email,product,size:row.size,color:row.color,
-          url:`${origin}/product-${product}.html`,unsubscribe:`${origin}/account.html#unsubscribe=${value}`}),
-      });
-      if (!sent.ok) throw new Error('Delivery rejected');
+      await deliver({event:'product.available',id:row.delivery_key,email:row.email,product,size:row.size,color:row.color,
+        url:`${origin}/product-${product}.html`,unsubscribe:`${origin}/account.html#unsubscribe=${value}`},item.name);
       await db.query("UPDATE slx_interests SET status='sent',sent_at=now() WHERE id=$1 AND status='sending'",[row.id]);
       result.sent++;
     } catch {

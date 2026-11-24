@@ -51,7 +51,7 @@ export function readyForSale(config, items, env) {
   const active = items.filter(item => item.status === 'available');
   const { address, authKey } = supabaseConfig(env);
   return env.SLX_ALLOW_LIVE_ORDERS === '1' && env.VERCEL_ENV === 'production'
-    && Boolean(address && authKey)
+    && Boolean(address && authKey) && env.SLX_CUSTOMER_OTP_ENABLED === '1'
     && config.manufacturer_ready && config.terms_ready && active.length > 0
     && active.every(item => item.price > 0 && item.sizes.length > 0 && item.colors.length > 0);
 }

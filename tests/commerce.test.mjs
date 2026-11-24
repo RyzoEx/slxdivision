@@ -4,6 +4,20 @@ import { memoryDatabase } from './commerce-db.mjs';
 import { commerce } from '../server/commerce.mjs';
 import { newId, hashToken } from '../server/security.mjs';
 import { productsSource } from '../server/orders.mjs';
+import { launchMailReady } from '../server/launch-mail.mjs';
+
+test('launch mail requires a production sender and an unsubscribe secret', () => {
+  const env = {
+    SLX_SMTP_USER:'store@example.com', SLX_SMTP_PASSWORD:'abcdefghijklmnop',
+    SLX_UNSUBSCRIBE_SECRET:'a-local-test-secret-with-at-least-32-characters',
+    VERCEL_ENV:'production',
+  };
+  assert.equal(launchMailReady(env),false);
+  env.SLX_SMTP_USER = 'store@gmail.com';
+  assert.equal(launchMailReady(env),true);
+  assert.equal(launchMailReady({...env,SLX_UNSUBSCRIBE_SECRET:''}),false);
+  assert.equal(launchMailReady({...env,VERCEL_ENV:'preview'}),false);
+});
 
 test('server-backed auth, protected admin, prelaunch, isolated order pipeline and finance',async () => {
   const db = await memoryDatabase();
@@ -37,6 +51,11 @@ test('server-backed auth, protected admin, prelaunch, isolated order pipeline an
     assert.ok((await db.query('SELECT token_hash FROM slx_sessions')).rows.some(row=>row.token_hash===hashToken(ownerCookie.split('=')[1])));
     const operatorCookie = cookie(await request('login',{body:{email:operator.email,password:'value'}}));
     assert.equal((await request('admin-finance',{cookie:operatorCookie})).status,403);
+    assert.equal((await (await request('account')).json()).authReady,false);
+    assert.equal((await request('otp',{body:{email:customer.email}})).status,503);
+    assert.equal((await request('verify',{body:{email:customer.email, code:'123456'}})).status,503);
+    env.SLX_CUSTOMER_OTP_ENABLED = '1';
+    assert.equal((await (await request('account')).json()).authReady,true);
     const buyerCookie = cookie(await request('verify',{body:{email:customer.email,code:'123456'}}));
     assert.equal((await request('admin-products',{cookie:buyerCookie})).status,403);
     const item = productsSource[0].id;

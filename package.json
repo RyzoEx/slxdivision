@@ -9,6 +9,7 @@
     "preview": "npm run build && node serve-preview.cjs"
   },
   "dependencies": {
+    "nodemailer": "^10.6.1",
     "pg": "^8.23.1"
   },
   "devDependencies": {
