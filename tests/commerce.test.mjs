@@ -31,8 +31,9 @@ test('server-backed auth, protected admin, prelaunch, isolated order pipeline an
     const operator = {id:newId(),email:'operator@example.test',email_confirmed_at:'2026-01-01'};
     const customer = {id:newId(),email:'buyer@example.test',email_confirmed_at:'2026-01-01'};
     await db.query("INSERT INTO slx_users(id,email,role) VALUES ($1,$2,'owner'),($3,$4,'operator')",[owner.id,owner.email,operator.id,operator.email]);
+    const otpRecipients = [];
     const auth = { authReady:true, password:email=>[owner,operator,customer].find(identity=>identity.email===email),
-      otp:async()=>{}, verify:async()=>customer };
+      otp:async email=>{otpRecipients.push(email);}, verify:async()=>customer };
     const env = {};
     const events = [];
     const fetch = commerce({db,auth,env,local:true,fetcher:async (url,init)=>{
@@ -61,6 +62,11 @@ test('server-backed auth, protected admin, prelaunch, isolated order pipeline an
     assert.equal((await request('verify',{body:{email:customer.email, code:'123456'}})).status,503);
     env.SLX_CUSTOMER_OTP_ENABLED = '1';
     assert.equal((await (await request('account')).json()).authReady,true);
+    const staffOtp = await request('otp',{body:{email:owner.email}});
+    const buyerOtp = await request('otp',{body:{email:customer.email}});
+    assert.equal(staffOtp.status,buyerOtp.status);
+    assert.deepEqual(await staffOtp.json(),await buyerOtp.json());
+    assert.deepEqual(otpRecipients,[customer.email]);
     const buyerCookie = cookie(await request('verify',{body:{email:customer.email,code:'123456'}}));
     assert.equal((await request('admin-products',{cookie:buyerCookie})).status,403);
     const item = productsSource[0].id;

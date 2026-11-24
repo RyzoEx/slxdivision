@@ -8,6 +8,9 @@
     message.setAttribute('role','status');
     return message;
   }
+  function teamLogin() {
+    return element('a',{href:'/admin',className:'text-button'},'Вхід для команди');
+  }
   function submit(form, message, call, success) {
     const button = form.querySelector('button[type="submit"]');
     form.addEventListener('submit',async event=>{
@@ -23,17 +26,17 @@
     const message = state('');
     const button = element('button',{className:'primary',type:'submit'},'Надіслати код');
     const form = element('form',{className:'interest-form'},element('label',{},'Email',email),button,message);
-    root.replaceChildren(form);
+    root.replaceChildren(form,teamLogin());
     submit(form,message,body=>api('otp',{body}),()=>verify(email.value));
   }
   function verify(email) {
     const code = element('input',{name:'code',inputMode:'numeric',autocomplete:'one-time-code',required:true,pattern:'[0-9]{6,8}'});
-    const message = state('Введіть код із листа.');
+    const message = state('Перевірте пошту. Якщо коду немає, перевірте адресу.');
     const back = element('button',{type:'button',className:'text-button'},'Інша адреса');
     back.addEventListener('click',login);
     const form = element('form',{className:'interest-form'},element('label',{},'Код підтвердження',code),
       element('button',{className:'primary',type:'submit'},'Підтвердити'),back,message);
-    root.replaceChildren(form);
+    root.replaceChildren(form,teamLogin());
     code.focus();
     submit(form,message,body=>api('verify',{body:{email,...body}}),render);
   }
