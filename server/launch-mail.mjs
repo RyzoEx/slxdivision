@@ -1,11 +1,18 @@
 import nodemailer from 'nodemailer';
 
-const hasGmail = env => /^[^\s@]+@gmail\.com$/i.test(env.SLX_SMTP_USER ?? '')
-  && /^[a-z0-9]{16}$/i.test(env.SLX_SMTP_PASSWORD ?? '');
+const smtpHosts = new Map([['gmail.com','smtp.gmail.com'],['meta.ua','smtp.meta.ua']]);
+
+function smtpHost(env) {
+  const sender = /^[^\s@]+@([^\s@]+)$/.exec(env.SLX_SMTP_USER ?? '');
+  if (!sender || !env.SLX_SMTP_PASSWORD?.trim()) return undefined;
+  const domain = sender[1].toLowerCase();
+  if (domain === 'gmail.com' && !/^[a-z0-9]{16}$/i.test(env.SLX_SMTP_PASSWORD)) return undefined;
+  return smtpHosts.get(domain);
+}
 
 export function launchMailReady(env) {
   return env.VERCEL_ENV === 'production' && env.SLX_UNSUBSCRIBE_SECRET?.length >= 32
-    && Boolean(env.SLX_EVENT_WEBHOOK?.startsWith('https://') || hasGmail(env));
+    && Boolean(env.SLX_EVENT_WEBHOOK?.startsWith('https://') || smtpHost(env));
 }
 
 export function launchMail(env, fetcher) {
@@ -20,7 +27,7 @@ export function launchMail(env, fetcher) {
     };
   }
   const transport = nodemailer.createTransport({
-    host:'smtp.gmail.com', port:465, secure:true,
+    host:smtpHost(env), port:465, secure:true,
     auth:{user:env.SLX_SMTP_USER,pass:env.SLX_SMTP_PASSWORD},
     connectionTimeout:7000, greetingTimeout:7000, socketTimeout:10000,
   });
