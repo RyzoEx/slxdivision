@@ -48,7 +48,7 @@ function footer(settings) {
   return `<footer class="footer site-footer"><div class="shell">
     <div class="footer-top">
       <div><a class="brand chrome-brand footer-brand" href="index.html" aria-label="SLX — головна"><img src="assets/brand/logo.webp" width="100" height="73" alt="SLX"></a>
-      <p>Незалежний вуличний одяг.<br>Максим і Даня.</p></div>
+      <p>Незалежний вуличний одяг.</p></div>
       <nav aria-label="Розділи сайту">${navLinks(links)}</nav>
       <div class="footer-social" aria-label="Контакти та соціальні мережі">${socialLinks(settings)}${email}</div>
       <div class="footer-subscribe"><p>Новини SLX</p><button class="primary" type="button" data-notify="newsletter">Підписатися</button></div>

@@ -22,12 +22,12 @@ module.exports = ({ settings, catalog }) => ({
     content: collectionsPage(catalog.collections.filter(collection => !collection.archived), catalog.products),
   },
   'about.html': {
-    title: 'About SLX', desc: 'SLX — незалежний бренд Максима й Дани.',
-    content: `<div class="shell story-grid"><article><h2>Максим і Даня</h2><p>Ми запускаємо SLX як незалежний бренд вуличного одягу. Нам близькі андеграунд нульових, вільний крій і графіка старих музичних обкладинок.</p><a class="detail-link" href="founders.html">Засновники SLX</a></article><img src="assets/brand/logo.webp" alt="Орбітальна емблема SLX" width="1035" height="754"></div>`,
+    title: 'About SLX', desc: 'SLX — незалежний бренд вуличного одягу.',
+    content: `<div class="shell story-grid"><article><h2>Незалежний вуличний одяг</h2><p>Ми запускаємо SLX як незалежний бренд вуличного одягу. Нам близькі андеграунд нульових, вільний крій і графіка старих музичних обкладинок.</p><a class="detail-link" href="founders.html">Засновники SLX</a></article><img src="assets/brand/logo.webp" alt="Орбітальна емблема SLX" width="1035" height="754"></div>`,
   },
   'founders.html': {
-    title: 'Founders', desc: 'Максим і Даня — засновники SLX.',
-    content: `<section class="shell story-grid"><article><h2>Максим</h2><p>Співзасновник SLX.</p></article><article><h2>Даня</h2><p>Співзасновник SLX.</p></article></section>`,
+    title: 'Founders', desc: 'Про заснування SLX.',
+    content: `<section class="shell story-grid"><article><h2>Засновники SLX</h2><p>SLX заснували вдвох як незалежний проєкт вуличного одягу.</p></article></section>`,
   },
   'lookbook.html': {
     title: 'Lookbook', desc: 'Лукбук SLX.',
