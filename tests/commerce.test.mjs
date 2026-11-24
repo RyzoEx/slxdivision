@@ -1,0 +1,81 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { memoryDatabase } from './commerce-db.mjs';
+import { commerce } from '../server/commerce.mjs';
+import { newId, hashToken } from '../server/security.mjs';
+import { productsSource } from '../server/orders.mjs';
+
+test('server-backed auth, protected admin, prelaunch, isolated order pipeline and finance',async () => {
+  const db = await memoryDatabase();
+  try {
+    const owner = {id:newId(),email:'owner@example.test',email_confirmed_at:'2026-01-01'};
+    const operator = {id:newId(),email:'operator@example.test',email_confirmed_at:'2026-01-01'};
+    const customer = {id:newId(),email:'buyer@example.test',email_confirmed_at:'2026-01-01'};
+    await db.query("INSERT INTO slx_users(id,email,role) VALUES ($1,$2,'owner'),($3,$4,'operator')",[owner.id,owner.email,operator.id,operator.email]);
+    const auth = { authReady:true, password:email=>[owner,operator,customer].find(identity=>identity.email===email),
+      otp:async()=>{}, verify:async()=>customer };
+    const env = {};
+    const fetch = commerce({db,auth,env,local:true});
+    const origin = 'http://127.0.0.1:4173';
+    function request(op, {body,cookie,wrongOrigin=false} = {}) {
+      return fetch(new Request(`${origin}/api/commerce?op=${op}`,{
+        method:body ? 'POST' : 'GET',
+        headers:{ ...(cookie ? {cookie} : {}), ...(body ? {'Content-Type':'application/json',origin:wrongOrigin ? 'http://bad.test' : origin} : {}) },
+        body:body ? JSON.stringify(body) : undefined,
+      }));
+    }
+    const cookie = response => response.headers.get('set-cookie').split(';')[0];
+    assert.equal((await request('admin-orders')).status,401);
+    assert.match(await (await fetch(new Request(origin+'/admin'))).text(),/admin-login/);
+    assert.equal((await request('login',{body:{email:owner.email,password:'value'},wrongOrigin:true})).status,403);
+    const ownerCookie = cookie(await request('login',{body:{email:owner.email,password:'value'}}));
+    assert.ok((await db.query('SELECT token_hash FROM slx_sessions')).rows.some(row=>row.token_hash===hashToken(ownerCookie.split('=')[1])));
+    const operatorCookie = cookie(await request('login',{body:{email:operator.email,password:'value'}}));
+    assert.equal((await request('admin-finance',{cookie:operatorCookie})).status,403);
+    const buyerCookie = cookie(await request('verify',{body:{email:customer.email,code:'123456'}}));
+    assert.equal((await request('admin-products',{cookie:buyerCookie})).status,403);
+    const item = productsSource[0].id;
+    const lines = [{id:item,quantity:2,size:'M',color:'Чорний',testPrice:120000}];
+    assert.equal((await request('order',{cookie:buyerCookie,body:{requestId:newId(),items:lines}})).status,409);
+    assert.equal((await request('admin-settings',{cookie:ownerCookie,body:{
+      sales:true,manufacturer_ready:true,terms_ready:true,founder_share_bps:5000,referral_bps:500,
+    }})).status,409);
+    assert.equal((await request('admin-referral&mode=test',{cookie:ownerCookie,body:{code:'SLX-TEST',label:'Test'}})).status,200);
+    const requestId = newId();
+    const payload = {requestId,items:lines,referral:'SLX-TEST',delivery:{phone:'+380123456789'}};
+    assert.equal((await request('admin-test-order&mode=test',{cookie:ownerCookie,body:payload})).status,201);
+    assert.equal((await request('admin-test-order&mode=test',{cookie:ownerCookie,body:payload})).status,201);
+    assert.equal((await (await request('admin-orders&mode=live',{cookie:ownerCookie})).json()).orders.length,0);
+    assert.equal((await (await request('account',{cookie:buyerCookie})).json()).orders.length,0);
+    const operations = await (await request('admin-orders&mode=test',{cookie:operatorCookie})).json();
+    assert.equal(operations.orders.length,1);
+    assert.equal(operations.orders[0].financials,undefined);
+    assert.deepEqual(operations.orders[0].delivery,{name:'Тестове замовлення'});
+    assert.equal((await request('admin-order&mode=test',{cookie:operatorCookie,body:{id:requestId,expectedStatus:'new',costs:{garment:2000}}})).status,403);
+    assert.equal((await request('admin-order&mode=test',{cookie:ownerCookie,body:{id:requestId,expectedStatus:'new',status:'shipped'}})).status,409);
+    let previous = 'new';
+    for (const status of ['availability_check','awaiting_payment','paid','sent_to_manufacturer','in_production','shipped','delivered','returned']) {
+      const response = await request('admin-order&mode=test',{cookie:ownerCookie,body:{
+        id:requestId,expectedStatus:previous,status,tracking:'204500000001',costs:{garment:60000,printing:22000},
+      }});
+      assert.equal(response.status,200,await response.text());
+      previous=status;
+      const info = await (await request('admin-referrals&mode=test',{cookie:ownerCookie})).json();
+      assert.equal(info.history.length,status==='returned' ? 2 : status==='delivered' ? 1 : 0);
+    }
+    const {totals,founder} = await (await request('admin-finance&mode=test&from=2020-01-01&to=2020-12-31',{cookie:ownerCookie})).json();
+    assert.equal(totals.profit,0);
+    assert.deepEqual(founder,{first:0,second:0});
+    const today = new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+    const realized = await (await request(`admin-finance&mode=test&from=${today}&to=${today}`,{cookie:ownerCookie})).json();
+    assert.equal(realized.totals.revenue,240000);
+    assert.equal(realized.totals.refunds,240000);
+    assert.equal(realized.totals.referrals,0);
+    assert.equal(realized.totals.profit,-82000);
+    const exportResult = await request(`admin-finance-csv&mode=test&from=${today}&to=${today}`,{cookie:ownerCookie});
+    assert.match(exportResult.headers.get('content-type'),/text\/csv/);
+    assert.doesNotMatch(await exportResult.text(),/example.test/);
+    assert.equal((await request('admin-staff',{cookie:ownerCookie,body:{id:operator.id,role:'operator',active:false}})).status,200);
+    assert.equal((await request('admin-orders',{cookie:operatorCookie})).status,401);
+  } finally { await db.close(); }
+});

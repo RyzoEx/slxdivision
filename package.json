@@ -6,5 +6,11 @@
     "check": "node inventory.cjs",
     "build": "node build-frontend.cjs",
     "preview": "npm run build && node serve-preview.cjs"
+  },
+  "dependencies": {
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.6.0"
   }
 }
