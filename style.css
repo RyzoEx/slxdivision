@@ -80,7 +80,7 @@ button:disabled { cursor: default; opacity: .6; }
 .lookbook-grid { margin-top: 13px; }
 .inventory-card { min-width: 0; padding-bottom: 13px; border-bottom: 1px solid var(--line); }
 .inventory-photo { position: relative; aspect-ratio: 4/5; overflow: hidden; border-radius: 8px; background: #161616; }
-.inventory-photo img { width: 100%; height: 100%; object-fit: cover; }
+.inventory-photo img { width: 100%; height: 100%; object-fit: contain; }
 .inventory-photo img + img { position: absolute; inset: 0; opacity: 0; transition: opacity .2s ease; }
 @media (hover: hover) { .inventory-card:hover img + img { opacity: 1; } }
 .inventory-card-title { display: flex; flex-wrap: wrap; gap: 5px 10px; justify-content: space-between; align-items: baseline; margin-block: 9px 5px; }
