@@ -5,7 +5,6 @@ const status = {
   available: 'У наявності',
   'sold-out': 'Розпродано',
 };
-const formatPrice = value => `${new Intl.NumberFormat('uk-UA').format(value)} ₴`;
 const productUrl = item => `product-${item.id}.html`;
 const collectionUrl = item => `collection-${item.id}.html`;
 const photo = (image, loading = 'lazy') => `<img src="${escape(image.src)}" alt="${escape(image.alt)}" loading="${loading}" decoding="async">`;
@@ -22,12 +21,13 @@ function grid(items, { tools = false, archived = false } = {}) {
       <label>Сортування <select data-sort><option value="">За каталогом</option><option value="low">Від дешевших</option><option value="high">Від дорожчих</option></select></label>
     </div><p class="muted inventory-empty" data-filter-empty hidden>Речей у цій категорії немає.</p>` : ''}
     <div class="inventory-grid" data-inventory-grid>${items.map(item => `
-      <article class="inventory-card" data-category="${escape(item.category)}"${item.price ? ` data-price="${item.price}"` : ''}>
+      <article class="inventory-card" ${archived ? '' : `data-catalog-item="${item.id}"`} data-category="${escape(item.category)}">
         <a href="${productUrl(item)}">
           <div class="inventory-photo">${photo(item.photos[0])}${item.photos[1] ? photo(item.photos[1]) : ''}</div>
-          <div class="inventory-card-title"><h2>${escape(item.name)}</h2><span>${archived ? 'Архів' : status[item.status]}</span></div>
-          ${item.price ? `<p>${formatPrice(item.price)}</p>` : ''}
+          <div class="inventory-card-title"><h2>${escape(item.name)}</h2><span data-stock>${archived ? 'Архів' : status[item.status === 'available' ? 'coming-soon' : item.status]}</span></div>
+          <p data-display-price hidden></p>
         </a>
+        ${archived ? '' : `<button class="text-button" type="button" data-favorite="${item.id}" aria-pressed="false">В обране</button>`}
       </article>`).join('')}</div>
   </section>`;
 }
@@ -44,24 +44,13 @@ function collectionsPage(collections, products) {
   }).join('')}</div></section>`;
 }
 
-function productPage(item, collection, related, url) {
-  const canOrder = !collection.archived && item.status === 'available' && item.orderUrl;
+function productPage(item, collection, related) {
   const specs = Object.entries(item.specifications ?? {});
-  const structured = canOrder && url('') ? {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    name: item.name,
-    image: item.photos.map(image => url(image.src)),
-    description: item.description,
-    brand: { '@type': 'Brand', name: 'SLX' },
-    offers: { '@type': 'Offer', url: item.orderUrl, priceCurrency: 'UAH', price: item.price, availability: 'https://schema.org/InStock' },
-  } : null;
   return {
     title: item.name,
     desc: item.description,
     image: item.photos[0],
-    structured,
-    content: `<section class="shell product-layout" data-product-page="${item.id}">
+    content: `<section class="shell product-layout" data-product-page="${item.id}" ${collection.archived ? '' : `data-catalog-item="${item.id}"`}>
       <div>
         <div class="product-photo">${photo(item.photos[0], 'eager')}<button class="photo-zoom" type="button" data-photo-zoom aria-pressed="false">Наблизити фото</button></div>
         ${item.photos.length > 1 ? `<div class="gallery-thumbnails" role="group" aria-label="Ракурси">${item.photos.map((image, index) =>
@@ -69,19 +58,19 @@ function productPage(item, collection, related, url) {
       </div>
       <div class="product-info">
         <a class="detail-link" href="${collectionUrl(collection)}">${escape(collection.name)}</a>
-        <p class="muted">${collection.archived ? 'Архів' : status[item.status]}</p>
-        ${item.price ? `<p class="product-price">${formatPrice(item.price)}</p>` : ''}
+        <p class="muted" data-stock>${collection.archived ? 'Архів' : status[item.status === 'available' ? 'coming-soon' : item.status]}</p>
+        <p class="product-price" data-display-price hidden></p>
         <p>${escape(item.description)}</p>
-        ${canOrder ? `
-          ${item.sizes?.length ? `<p><strong>Розміри</strong> ${item.sizes.map(escape).join(' · ')}</p>` : ''}
-          ${item.colors?.length ? `<p><strong>Кольори</strong> ${item.colors.map(escape).join(' · ')}</p>` : ''}
-          <a class="primary" href="${escape(item.orderUrl)}">Замовити</a>` : ''}
-        ${!collection.archived && item.status === 'coming-soon' ? `<div class="product-variants">
-          ${item.sizes?.length ? `<label>Розмір <select data-variant="size">${options(item.sizes, 'Обрати розмір')}</select></label>` : ''}
-          ${item.colors?.length ? `<label>Колір <select data-variant="color">${options(item.colors, 'Обрати колір')}</select></label>` : ''}
-          <button class="primary" type="button" data-notify="${item.id}">Повідомити про запуск</button>
+        ${!collection.archived ? `<div class="product-variants">
+          <div class="variant-choices" data-choices>
+            ${item.sizes?.length ? `<label>Розмір <select data-variant="size">${options(item.sizes, 'Обрати розмір')}</select></label>` : ''}
+            ${item.colors?.length ? `<label>Колір <select data-variant="color">${options(item.colors, 'Обрати колір')}</select></label>` : ''}
+          </div>
+          <button class="primary" type="button" data-notify="${item.id}" ${item.status === 'sold-out' ? 'hidden' : ''}>Повідомити про запуск</button>
+          <button class="secondary" type="button" data-cart-add="${item.id}" ${item.status === 'sold-out' ? 'hidden' : ''}>До списку покупок</button>
+          <button class="text-button" type="button" data-favorite="${item.id}" aria-pressed="false">В обране</button>
+          <p role="status" data-cart-message></p>
         </div>` : ''}
-        ${!collection.archived && item.status === 'available' && !canOrder ? `<a class="detail-link" href="contact.html">Контакти для замовлення</a>` : ''}
         ${specs.length ? `<details><summary>Характеристики</summary><dl>${specs.map(([label, value]) =>
           `<div><dt>${escape(label)}</dt><dd>${escape(value)}</dd></div>`).join('')}</dl></details>` : ''}
       </div>
@@ -89,7 +78,7 @@ function productPage(item, collection, related, url) {
   };
 }
 
-function inventoryPages({ collections, products }, origin) {
+function inventoryPages({ collections, products }) {
   const pages = {};
   for (const collection of collections) {
     const entries = products.filter(item => item.collection === collection.id);
@@ -103,8 +92,7 @@ function inventoryPages({ collections, products }, origin) {
         ${grid(entries, { tools: true, archived: collection.archived })}`,
     };
     for (const item of entries) {
-      const url = target => origin ? `${origin}/${target}` : '';
-      pages[productUrl(item)] = productPage(item, collection, entries.filter(other => other !== item).slice(0, 3), url);
+      pages[productUrl(item)] = productPage(item, collection, entries.filter(other => other !== item).slice(0, 3));
     }
   }
   return pages;

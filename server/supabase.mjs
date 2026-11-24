@@ -42,7 +42,9 @@ export function supabase(env = process.env, fetcher = fetch) {
       requireThat(result.ok, 502, 'Не вдалося зберегти зображення.');
     },
     download(key) {
-      return fetcher(storageURL(key), {
+      const url = storageURL(key);
+      url.pathname = url.pathname.replace('/object/','/object/authenticated/');
+      return fetcher(url, {
         headers:{ apikey:secret, Authorization:`Bearer ${secret}` }, redirect:'error', signal:AbortSignal.timeout(8000),
       });
     },

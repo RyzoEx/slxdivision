@@ -15,7 +15,12 @@ test('server-backed auth, protected admin, prelaunch, isolated order pipeline an
     const auth = { authReady:true, password:email=>[owner,operator,customer].find(identity=>identity.email===email),
       otp:async()=>{}, verify:async()=>customer };
     const env = {};
-    const fetch = commerce({db,auth,env,local:true});
+    const events = [];
+    const fetch = commerce({db,auth,env,local:true,fetcher:async (url,init)=>{
+      assert.equal(url,'https://mail.example.test/slx');
+      events.push({payload:JSON.parse(init.body),key:init.headers['Idempotency-Key']});
+      return new Response(null,{status:204});
+    }});
     const origin = 'http://127.0.0.1:4173';
     function request(op, {body,cookie,wrongOrigin=false} = {}) {
       return fetch(new Request(`${origin}/api/commerce?op=${op}`,{
@@ -37,7 +42,7 @@ test('server-backed auth, protected admin, prelaunch, isolated order pipeline an
     const item = productsSource[0].id;
     const lines = [{id:item,quantity:2,size:'M',color:'Чорний',testPrice:120000}];
     assert.equal((await request('order',{cookie:buyerCookie,body:{requestId:newId(),items:lines}})).status,409);
-    assert.equal((await request('admin-settings',{cookie:ownerCookie,body:{
+    assert.equal((await request('admin-settings&mode=live',{cookie:ownerCookie,body:{
       sales:true,manufacturer_ready:true,terms_ready:true,founder_share_bps:5000,referral_bps:500,
     }})).status,409);
     assert.equal((await request('admin-referral&mode=test',{cookie:ownerCookie,body:{code:'SLX-TEST',label:'Test'}})).status,200);
@@ -75,7 +80,42 @@ test('server-backed auth, protected admin, prelaunch, isolated order pipeline an
     const exportResult = await request(`admin-finance-csv&mode=test&from=${today}&to=${today}`,{cookie:ownerCookie});
     assert.match(exportResult.headers.get('content-type'),/text\/csv/);
     assert.doesNotMatch(await exportResult.text(),/example.test/);
-    assert.equal((await request('admin-staff',{cookie:ownerCookie,body:{id:operator.id,role:'operator',active:false}})).status,200);
+    assert.equal((await request('admin-staff&mode=live',{cookie:ownerCookie,body:{id:operator.id,role:'operator',active:false}})).status,200);
     assert.equal((await request('admin-orders',{cookie:operatorCookie})).status,401);
+    assert.equal((await request('interest',{body:{email:customer.email,product:item,size:'',color:''}})).status,201);
+    assert.equal((await request('admin-product&mode=test',{cookie:ownerCookie,body:{id:item}})).status,403);
+    Object.assign(env,{
+      VERCEL_ENV:'production', SLX_ALLOW_LIVE_ORDERS:'1', SLX_SUPABASE_URL:'https://auth.example.test',
+      SLX_SUPABASE_ANON_KEY:'test-key', SLX_EVENT_WEBHOOK:'https://mail.example.test/slx',
+      SLX_UNSUBSCRIBE_SECRET:'test-only-secret-for-contract-test',
+    });
+    assert.equal((await request('admin-product&mode=live',{cookie:ownerCookie,body:{
+      id:item,status:'available',price:123000,sizes:['M'],colors:['Чорний'],
+    }})).status,200);
+    const enable = await request('admin-settings&mode=live',{cookie:ownerCookie,body:{
+      sales:true,manufacturer_ready:true,terms_ready:true,founder_share_bps:5000,referral_bps:500,
+    }});
+    assert.equal(enable.status,200,await enable.text());
+    const liveId = newId();
+    assert.equal((await request('order',{cookie:buyerCookie,body:{requestId:liveId,items:lines,delivery:{
+      name:'T',phone:'+380000000000',city:'Київ',point:'47',
+    }}})).status,201);
+    const history = (await (await request('account',{cookie:buyerCookie})).json()).orders;
+    assert.equal(history.length,1);
+    assert.equal(Number(history[0].subtotal),246000);
+    assert.equal(history[0].items[0].price,123000);
+    for (const [expectedStatus,status] of [['new','availability_check'],['availability_check','awaiting_payment']]) {
+      assert.equal((await request('admin-order&mode=live',{cookie:ownerCookie,body:{id:liveId,expectedStatus,status}})).status,200);
+    }
+    assert.equal((await request('admin-order&mode=live',{cookie:ownerCookie,body:{
+      id:liveId,expectedStatus:'awaiting_payment',status:'paid',
+    }})).status,409);
+    const notice = await request('admin-notify&mode=live',{cookie:ownerCookie,body:{id:item}});
+    assert.equal(notice.status,200,await notice.clone().text());
+    assert.deepEqual(await notice.json(),{sent:1,failed:0});
+    assert.equal(events[0].key,events[0].payload.id);
+    const unsubscribe = new URLSearchParams(new URL(events[0].payload.unsubscribe).hash.slice(1)).get('unsubscribe');
+    assert.equal((await request('unsubscribe',{body:{token:unsubscribe}})).status,200);
+    assert.equal((await db.query('SELECT status FROM slx_interests')).rows[0].status,'unsubscribed');
   } finally { await db.close(); }
 });

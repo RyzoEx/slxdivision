@@ -3,6 +3,7 @@ const icons = {
   menu: icon('<path d="M3 8h18M3 16h18"/>'),
   search: icon('<circle cx="10.5" cy="10.5" r="6.3"/><path d="m15 15 5 5"/>'),
   profile: icon('<circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-6 14-6 14 0"/>'),
+  favorite: icon('<path d="M12 20s-8-4.8-8-10.2a4.2 4.2 0 0 1 8-1.6 4.2 4.2 0 0 1 8 1.6C20 15.2 12 20 12 20z"/>'),
   cart: icon('<path d="M4.5 8h15l1 13h-17zM8 9V6a4 4 0 0 1 8 0v3"/>'),
 };
 const links = [
@@ -25,7 +26,8 @@ function header(home = false) {
     <div class="header-actions">
       <button class="icon-button" type="button" data-panel="search" aria-label="Пошук" aria-haspopup="dialog">${icons.search}</button>
       <button class="icon-button profile-trigger" type="button" data-panel="profile" aria-label="Профіль" aria-haspopup="dialog">${icons.profile}</button>
-      <button class="icon-button" type="button" data-panel="cart" aria-label="Кошик" aria-haspopup="dialog">${icons.cart}</button>
+      <button class="icon-button" type="button" data-panel="favorites" aria-label="Обране" aria-haspopup="dialog">${icons.favorite}</button>
+      <button class="icon-button" type="button" data-panel="cart" aria-label="Кошик" aria-haspopup="dialog">${icons.cart}<span class="cart-count" hidden></span></button>
     </div>
   </div></header>`;
 }

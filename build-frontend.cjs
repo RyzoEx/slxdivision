@@ -48,7 +48,7 @@ if (!localPages) {
     rmSync(output, { recursive: true });
   }
   mkdirSync(output);
-  for (const file of ['style.css', 'intro-start.js', 'metrics.js', 'experience.js', 'metrics.html', '404.html', 'storefront.js', 'catalog-ui.js']) {
+  for (const file of ['style.css', 'commerce.css', 'commerce-client.js', 'account.js', 'admin-ui.js', 'intro-start.js', 'metrics.js', 'experience.js', 'metrics.html', '404.html', 'storefront.js', 'catalog-ui.js']) {
     copyFileSync(path.join(root, file), path.join(output, file));
   }
   for (const group of ['brand', 'fonts']) {
@@ -69,7 +69,8 @@ if (!localPages) {
   }
 }
 const url = file => origin ? `${origin}/${file}` : file;
-const searchIndex = catalog.activeProducts.map(({ id, name, category, status }) => ({ id, name, category, status }));
+const searchIndex = catalog.activeProducts.map(({ id, name, category, status, sizes, colors, photos }) =>
+  ({ id, name, category, status:status==='available' ? 'coming-soon' : status, sizes:sizes ?? [], colors:colors ?? [], src:photos[0].src, price:null }));
 writePage('catalog-index.js', `window.SLX_CATALOG = ${JSON.stringify(searchIndex)};\n`);
 
 const homeCanonical = origin
@@ -88,21 +89,22 @@ const home = readFileSync(path.join(root, 'index.html'), 'utf8')
   });
 writePage('index.html', home);
 
-const pages = { ...editorial({ settings, catalog }), ...inventoryPages(catalog, origin) };
+const pages = { ...editorial({ settings, catalog }), ...inventoryPages(catalog) };
 
 for (const [file, page] of Object.entries(pages)) {
   writePage(file, `<!doctype html>
 <html lang="uk">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escape(page.title)} | SLX</title><meta name="description" content="${escape(page.desc)}">
-${origin ? `<link rel="canonical" href="${url(file)}">` : '<meta name="robots" content="noindex">'}
+${origin && !page.private ? `<link rel="canonical" href="${url(file)}">` : '<meta name="robots" content="noindex">'}
 ${liveSubscriptions}
 <meta property="og:title" content="${escape(page.title)} | SLX">
 <meta property="og:description" content="${escape(page.desc)}">
 <meta property="og:image" content="${escape(url(page.image?.src ?? 'assets/brand/logo.webp'))}">
 ${page.structured ? `<script type="application/ld+json">${JSON.stringify(page.structured).replace(/</g, '\\u003c')}</script>` : ''}
-<link rel="stylesheet" href="style.css"><link rel="icon" href="assets/brand/logo.webp">
-<script src="catalog-index.js" defer></script><script src="metrics.js" defer></script><script src="storefront.js" defer></script><script src="catalog-ui.js" defer></script>
+<link rel="stylesheet" href="style.css"><link rel="stylesheet" href="commerce.css"><link rel="icon" href="assets/brand/logo.webp">
+<script src="catalog-index.js" defer></script><script src="commerce-client.js" defer></script><script src="metrics.js" defer></script><script src="storefront.js" defer></script><script src="catalog-ui.js" defer></script>
+${page.script ? `<script src="${page.script}" defer></script>` : ''}
 </head>
 <body id="top" class="editorial-page">
 ${header()}
@@ -113,7 +115,7 @@ ${footer(settings)}
 
 
 if (origin) {
-  const files = ['', ...Object.keys(pages)];
+  const files = ['', ...Object.keys(pages).filter(file => !pages[file].private)];
   writePage('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${files.map(file => `  <url><loc>${url(file)}</loc></url>`).join('\n')}\n</urlset>\n`);
   writePage('robots.txt', `User-agent: *\nAllow: /\nSitemap: ${url('sitemap.xml')}\n`);
 }

@@ -13,6 +13,10 @@ function lookbook(collections) {
 }
 
 module.exports = ({ settings, catalog }) => ({
+  'account.html': {
+    title: 'Мій кабінет', desc: 'Вхід та історія замовлень SLX.', private:true, script:'account.js',
+    content: '<section class="shell account-panel" id="slx-account"><p role="status">Завантажуємо кабінет…</p></section>',
+  },
   'shop.html': {
     title: 'Shop', desc: 'Каталог SLX.',
     content: grid(catalog.activeProducts, { tools: true }),

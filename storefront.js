@@ -5,23 +5,16 @@
   dialog.innerHTML = '<div class="drawer-top"><h2 id="panel-title"></h2><button type="button" class="close-button" aria-label="Закрити" autofocus></button></div><div class="drawer-body"></div>';
   document.body.append(dialog);
   const content = dialog.querySelector('.drawer-body');
-  const newsletterKey = 'slx-interest-v1';
+  const {api,element,money,cart:cartStore,favorites:favoriteStore,catalog} = window.slx;
   const products = window.SLX_CATALOG ?? [];
   const productById = new Map(products.map(item => [item.id, item]));
   let source;
-
-  function addresses() {
-    try {
-      const records = JSON.parse(localStorage.getItem(newsletterKey) ?? '[]');
-      return Array.isArray(records)
-        ? records.filter(record => typeof record?.email === 'string'
-          && (record.product === 'newsletter' || productById.has(record.product)))
-        : [];
-    } catch { return []; }
-  }
+  let cartRender = 0;
+  let checkoutIntent;
 
   function open(kind, title, trigger) {
     source = trigger;
+    cartRender++;
     dialog.dataset.kind = kind;
     dialog.querySelector('h2').textContent = title;
     content.replaceChildren();
@@ -72,19 +65,132 @@
 
   function profile(trigger) {
     const panel = open('profile', 'Профіль', trigger);
-    const saved = addresses();
-    if (!saved.length) panel.textContent = 'Збережених заявок ще немає.';
-    for (const record of saved) {
-      const row = document.createElement('p');
-      row.textContent = [productById.get(record.product)?.name ?? 'Новини SLX', record.size, record.color].filter(Boolean).join(' · ');
-      panel.append(row);
-    }
+    panel.append(element('a',{href:'account.html',className:'primary'},'Мій кабінет'));
   }
 
   function cart(trigger) {
-    const panel = open('cart', 'Кошик', trigger);
-    if (products.length) panel.innerHTML = '<p>Замовлення оформлюються за посиланням на сторінці речі.</p><a class="detail-link" href="shop.html">До каталогу</a>';
-    else panel.textContent = 'Пока одягу нема';
+    open('cart', 'Кошик', trigger);
+    renderCart();
+  }
+
+  const cartCount = () => cartStore.read().reduce((count,row)=>count + row.quantity,0);
+  function badges() {
+    const count = cartCount();
+    for (const badge of document.querySelectorAll('.cart-count')) {
+      badge.textContent = count;
+      badge.hidden = !count;
+      badge.parentElement.setAttribute('aria-label',count ? `Кошик (${count})` : 'Кошик');
+    }
+    const saved = new Set(favoriteStore.read());
+    for (const button of document.querySelectorAll('[data-favorite]')) {
+      const active = saved.has(button.dataset.favorite);
+      button.setAttribute('aria-pressed',String(active));
+      button.textContent = active ? 'В обраному' : 'В обране';
+    }
+  }
+
+  function productLink(id, label) {
+    return element('a',{className:'utility-link',href:`product-${id}.html`},label);
+  }
+
+  function favorites(trigger) {
+    const panel = open('favorites','Обране',trigger);
+    const entries = favoriteStore.read().filter(id=>productById.has(id));
+    if (!entries.length) panel.append('Тут з’являться збережені речі.');
+    for (const id of entries) {
+      const remove = element('button',{type:'button',className:'text-button'},'Прибрати');
+      remove.addEventListener('click',()=>{
+        favoriteStore.write(favoriteStore.read().filter(value=>value!==id));
+        badges();
+        favorites(trigger);
+        panel.querySelector('button')?.focus();
+      });
+      panel.append(element('div',{className:'cart-line'},productLink(id,productById.get(id).name),remove));
+    }
+  }
+
+  async function renderCart() {
+    const view = ++cartRender;
+    const lines = cartStore.read();
+    content.replaceChildren();
+    if (!lines.length) {
+      content.append(element('p',{},products.length ? 'Кошик порожній.' : 'Пока одягу нема'),
+        element('a',{className:'detail-link',href:'shop.html'},'До каталогу'));
+      return;
+    }
+    const data = await catalog();
+    if (view!==cartRender || !dialog.open || dialog.dataset.kind!=='cart') return;
+    const mapped = new Map((data.ready ? data.products : products).map(item=>[item.id,item]));
+    let total = 0;
+    let complete = data.sales;
+    for (const [index,line] of lines.entries()) {
+      const item = mapped.get(line.id);
+      const enabled = item?.status === 'available' && item.price > 0
+        && item.sizes.includes(line.size) && item.colors.includes(line.color);
+      complete &&= Boolean(enabled);
+      if (enabled) total += item.price*line.quantity;
+      const quantity = element('input',{type:'number',min:'1',max:'10',value:String(line.quantity)});
+      quantity.setAttribute('aria-label',`Кількість: ${item?.name ?? line.id}`);
+      quantity.addEventListener('change',()=>{
+        const current = cartStore.read();
+        if (current[index]?.id === line.id && quantity.validity.valid && Number.isInteger(quantity.valueAsNumber)) {
+          current[index].quantity = quantity.valueAsNumber;
+          cartStore.write(current);
+        }
+        badges(); renderCart();
+      });
+      const remove = element('button',{className:'text-button',type:'button'},'Прибрати');
+      remove.addEventListener('click',()=>{
+        const current = cartStore.read();
+        if (current[index]?.id===line.id) current.splice(index,1);
+        cartStore.write(current); badges(); renderCart();
+      });
+      content.append(element('div',{className:'cart-line'},
+        element('div',{},item ? productLink(line.id,item.name) : 'Річ більше недоступна',
+          element('span',{className:'muted'},[line.size,line.color].filter(Boolean).join(' · ')),
+          data.sales && !enabled ? element('p',{className:'muted'},'Змініть варіант або приберіть річ.') : null),
+        element('div',{className:'cart-actions'},quantity,remove)));
+    }
+    if (!data.sales) {
+      content.append(element('p',{className:'muted'},'Передзапуск. Речі збережено у списку покупок.'));
+      return;
+    }
+    if (!complete) return;
+    content.append(element('p',{},`Разом: ${money(total)}`));
+    const checkout = element('button',{type:'button',className:'primary'},'Оформити запит');
+    content.append(checkout);
+    checkout.addEventListener('click',async()=>{
+      checkout.disabled = true;
+      const account = await api('account').catch(()=>({user:null}));
+      if (view!==cartRender) return;
+      if (account.user?.role!=='customer') {
+        checkout.replaceWith(element('a',{href:'account.html',className:'primary'},'Увійти для оформлення'));
+        return;
+      }
+      const form = element('form',{className:'interest-form'});
+      for (const [name,label,required] of [['name','Ім’я',true],['phone','Телефон',true],['city','Місто',true],['point','Відділення або адреса',true],['referral','Код SLX Circle',false]]) {
+        form.append(element('label',{},label,element('input',{name,required})));
+      }
+      const send = element('button',{type:'submit',className:'primary'},'Надіслати без оплати');
+      const result = element('p',{});
+      result.setAttribute('role','status');
+      form.append(send,result);
+      checkout.replaceWith(form);
+      form.addEventListener('submit',async event=>{
+        event.preventDefault();
+        send.disabled = true;
+        const {referral,...delivery} = Object.fromEntries(new FormData(form));
+        const fingerprint = JSON.stringify({lines,referral,delivery});
+        if (checkoutIntent?.fingerprint !== fingerprint) checkoutIntent = {fingerprint,id:crypto.randomUUID()};
+        try {
+          await api('order',{body:{requestId:checkoutIntent.id,items:lines,delivery,referral}});
+          checkoutIntent = undefined;
+          cartStore.write([]); badges();
+          if (view!==cartRender) return;
+          content.replaceChildren(element('p',{},'Запит прийнято.'),element('a',{href:'account.html',className:'detail-link'},'Мої замовлення'));
+        } catch (error) { result.textContent = error.message; send.disabled = false; }
+      });
+    });
   }
 
   function subscribe(trigger) {
@@ -94,7 +200,7 @@
     const size = variants?.querySelector('[data-variant="size"]')?.value ?? '';
     const color = variants?.querySelector('[data-variant="color"]')?.value ?? '';
     const panel = open('newsletter', item ? 'Повідомити про запуск' : 'Новини SLX', trigger);
-    const live = document.querySelector('meta[name="slx-subscription"]')?.content === 'live';
+    const redirectToLegacy = document.querySelector('meta[name="slx-subscription"]')?.content === 'live';
     panel.innerHTML = '<form class="interest-form"><label for="notify-email">Email</label><input id="notify-email" name="email" type="email" maxlength="200" autocomplete="email" required><button class="primary" type="submit">Підписатися</button><p class="muted interest-note"></p><p role="status"></p></form>';
     const form = panel.querySelector('form');
     const button = form.querySelector('button');
@@ -104,44 +210,71 @@
       selection.textContent = [item.name, size, color].filter(Boolean).join(' · ');
       form.before(selection);
     }
-    panel.querySelector('.interest-note').textContent = live
-      ? 'Використаємо email для новин SLX.'
-      : 'Демо: заявка зберігається в цьому браузері.';
+    panel.querySelector('.interest-note').textContent = item
+      ? 'Використаємо email, щоб повідомити про наявність цієї речі.'
+      : 'Використаємо email для новин SLX.';
     form.addEventListener('submit', async event => {
       event.preventDefault();
       const email = form.elements.email.value.trim().toLowerCase();
       const record = { product, email, size, color };
       button.disabled = true;
       try {
-        if (live) {
-          const result = await fetch('/api/subscribe', {
+        try { await api('interest',{body:record}); }
+        catch (error) {
+          if (error.status !== 503 || !redirectToLegacy) throw error;
+          const response = await fetch('/api/subscribe', {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(record),
           });
-          if (!result.ok) throw new Error('Subscription failed');
+          if (!response.ok) throw error;
         }
-        const records = addresses().filter(entry => !(entry.email === email && entry.product === product
-          && entry.size === size && entry.color === color));
-        try { localStorage.setItem(newsletterKey, JSON.stringify([...records, record])); }
-        catch (error) { if (!live) throw error; }
         window.slxMetric?.(item ? 'product_notify_request' : 'newsletter_request');
-        status.textContent = live ? 'Заявку прийнято.' : 'Заявку збережено в цьому браузері.';
+        status.textContent = 'Заявку прийнято.';
         form.reset();
-      } catch { status.textContent = 'Не вдалося зберегти заявку. Спробуй ще раз.'; }
+      } catch (error) { status.textContent = error.message; }
       finally { button.disabled = false; }
     });
     form.elements.email.focus();
   }
 
-  const panels = { menu, search, profile, cart };
+  const panels = { menu, search, profile, cart, favorites };
   document.addEventListener('click', event => {
     const panel = event.target.closest('button[data-panel]');
     const subscribeButton = event.target.closest('button[data-notify]');
     if (panel) panels[panel.dataset.panel]?.(panel);
     if (subscribeButton) subscribe(subscribeButton);
+    const favorite = event.target.closest('button[data-favorite]');
+    if (favorite) {
+      const id = favorite.dataset.favorite;
+      const saved = favoriteStore.read();
+      favoriteStore.write(saved.includes(id) ? saved.filter(value=>value!==id) : [...saved,id]);
+      badges();
+    }
+    const add = event.target.closest('button[data-cart-add]');
+    if (add) {
+      const section = add.closest('.product-variants');
+      const size = section.querySelector('[data-variant="size"]');
+      const color = section.querySelector('[data-variant="color"]');
+      const message = section.querySelector('[data-cart-message]');
+      if ((size && !size.value) || (color && !color.value)) {
+        message.textContent = 'Оберіть розмір і колір з доступних варіантів.';
+        (size && !size.value ? size : color).focus();
+        return;
+      }
+      const entry = {id:add.dataset.cartAdd,size:size?.value ?? '',color:color?.value ?? '',quantity:1};
+      const lines = cartStore.read();
+      const existing = lines.find(row=>row.id===entry.id && row.size===entry.size && row.color===entry.color);
+      if (existing) existing.quantity = Math.min(10,existing.quantity+1);
+      else if (lines.length<20) lines.push(entry);
+      else { message.textContent = 'У кошику вже 20 позицій.'; return; }
+      message.textContent = cartStore.write(lines) ? 'Додано до кошика.' : 'Не вдалося зберегти кошик у цьому браузері.';
+      badges();
+    }
   });
   dialog.querySelector('.close-button').addEventListener('click', () => dialog.close());
   let outside;
   dialog.addEventListener('pointerdown', event => { outside = event.target === dialog; });
   dialog.addEventListener('click', event => { if (outside && event.target === dialog) dialog.close(); });
   dialog.addEventListener('close', () => source?.focus({ preventScroll: true }));
+  window.addEventListener('storage', () => { badges(); if (dialog.open && dialog.dataset.kind==='cart') renderCart(); });
+  badges();
 })();

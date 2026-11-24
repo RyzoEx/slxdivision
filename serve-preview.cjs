@@ -1,10 +1,16 @@
 const http = require('node:http');
 const path = require('node:path');
 const { readFile } = require('node:fs/promises');
+const { Readable } = require('node:stream');
 const config = require('./vercel.json');
 
 const output = path.join(__dirname, 'dist');
 const port = Number(process.env.PORT || 4173);
+const api = Promise.all([import('./server/commerce.mjs'),import('./server/db.mjs'),import('./server/supabase.mjs')])
+  .then(([{commerce},{openPostgres},{supabase}])=>commerce({
+    db:openPostgres(process.env.SLX_PREVIEW_DATABASE_URL || null),auth:supabase(),
+    env:{...process.env,VERCEL_ENV:'development'},local:true,
+  }));
 const types = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8', '.webp': 'image/webp', '.jpg': 'image/jpeg',
@@ -26,6 +32,27 @@ http.createServer(async (request, response) => {
   }
   const filename = requestPath === '/' ? 'index.html' : requestPath.slice(1);
   const headers = headersFor(requestPath);
+  if (requestPath==='/admin' || requestPath==='/api/commerce') {
+    try {
+      const host = request.headers.host;
+      if (!/^(?:127\.0\.0\.1|localhost)(?::\d+)?$/.test(host ?? '')) {
+        response.writeHead(400,headers).end();
+        return;
+      }
+      const init = {method:request.method,headers:request.headers};
+      if (!['GET','HEAD'].includes(request.method)) {
+        init.body = Readable.toWeb(request);
+        init.duplex = 'half';
+      }
+      const result = await (await api)(new Request(new URL(request.url,`http://${host}`),init));
+      response.writeHead(result.status,{...headers,...Object.fromEntries(result.headers)});
+      if (result.body) Readable.fromWeb(result.body).pipe(response);
+      else response.end();
+    } catch {
+      response.writeHead(500,headers).end();
+    }
+    return;
+  }
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     response.writeHead(405, { ...headers, Allow: 'GET, HEAD' }).end();
     return;

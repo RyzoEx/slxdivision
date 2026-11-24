@@ -123,7 +123,11 @@ export async function listOrders(db, mode) {
     FROM slx_order_events e WHERE e.order_id=o.id),'[]') AS events
     FROM slx_orders o LEFT JOIN slx_users u ON u.id=o.user_id
     WHERE o.mode=$1 ORDER BY o.created_at DESC LIMIT 100`,[mode]);
-  return rows.map(order => mode === 'test' ? {...order,email:null} : order);
+  return rows.map(order => ({
+    ...order,
+    ...(mode === 'test' ? {email:null} : {}),
+    allowed: [order.status,...edges[order.status].filter(status => mode === 'test' || status !== 'paid')],
+  }));
 }
 
 export async function changeOrder(db, actor, mode, data) {

@@ -4,7 +4,7 @@ import { audit, catalog, changeOrder, collectionsSource, createOrder, listOrders
   referrals, setProduct, setReferral, settings, statuses, updateSettings } from './orders.mjs';
 import { csv, report } from './finance.mjs';
 import { interest, notifyLaunch, unsubscribe } from './interests.mjs';
-import { currentUser, Failure, isAdmin, newId, readJson, requireThat, text } from './security.mjs';
+import { currentUser, Failure, isAdmin, newId, readJson, requireThat, text, throttle } from './security.mjs';
 
 const baseHeaders = { 'Cache-Control':'no-store','X-Robots-Tag':'noindex','X-Content-Type-Options':'nosniff' };
 function json(data, status = 200, headers = {}) {
@@ -25,7 +25,7 @@ function exposeOrder(order,user) {
 function adminMetadata(user, config, items, env, auth) {
   return {
     user, statuses, sales:config.sales && readyForSale(config,items,env), modeReady:readyForSale(config,items,env),
-    storageReady:auth.storageReady, canNotify:env.VERCEL_ENV === 'production' && Boolean(env.SLX_EVENT_WEBHOOK),
+    storageReady:auth.storageReady, canNotify:env.VERCEL_ENV === 'production' && Boolean(env.SLX_EVENT_WEBHOOK && env.SLX_UNSUBSCRIBE_SECRET),
   };
 }
 
@@ -81,7 +81,7 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       }
       if (op === 'admin-products' && get) {
         requireThat(manager(user),403,'Недостатньо прав.');
-        return json({products:await catalog(db),storageReady:auth.storageReady,canNotify:env.VERCEL_ENV === 'production' && Boolean(env.SLX_EVENT_WEBHOOK)});
+        return json({products:await catalog(db),storageReady:auth.storageReady,canNotify:env.VERCEL_ENV === 'production' && Boolean(env.SLX_EVENT_WEBHOOK && env.SLX_UNSUBSCRIBE_SECRET)});
       }
       if (op === 'admin-collections' && get) {
         requireThat(manager(user),403,'Недостатньо прав.');
@@ -131,6 +131,7 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       if (op==='unsubscribe') { await unsubscribe(db,data.token); return json({ok:true}); }
       if (op==='order') {
         requireThat(user?.role==='customer',401,'Підтвердьте вхід у кабінет покупця.');
+        await throttle(db,`order-user:${user.id}`,18,15);
         return json(await createOrder(db,user,'live',data,env),201);
       }
       if (op==='admin-test-order') {
@@ -139,11 +140,11 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       }
       if (op==='admin-order') return json(await changeOrder(db,user,mode,data));
       if (op==='admin-product') {
-        requireThat(manager(user),403,'Недостатньо прав.');
+        requireThat(manager(user) && mode==='live',403,'Публічний каталог редагується лише в робочому режимі.');
         return json(await setProduct(db,user,data,env));
       }
       if (op==='admin-collection') {
-        requireThat(manager(user),403,'Недостатньо прав.');
+        requireThat(manager(user) && mode==='live',403,'Колекції редагуються лише в робочому режимі.');
         requireThat(collectionsSource.some(item=>item.id===data.id),404,'Колекцію не знайдено.');
         const notes = text(data.notes,1000);
         await db.query('INSERT INTO slx_collections VALUES ($1,$2::jsonb) ON CONFLICT(id) DO UPDATE SET data=EXCLUDED.data',[data.id,JSON.stringify({notes})]);
@@ -161,11 +162,11 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
         return json(await notifyLaunch(db,user,data.id,env,origin,fetcher));
       }
       if (op==='admin-settings' || op==='admin-staff') {
-        requireThat(user.role==='owner',403,'Налаштування доступні лише власнику.');
+        requireThat(user.role==='owner' && mode==='live',403,'Зміни доступні власнику в робочому режимі.');
         return json(op==='admin-staff' ? await changeRole(db,user,data) : await updateSettings(db,user,data,env));
       }
       if (op==='admin-upload') {
-        requireThat(manager(user),403,'Недостатньо прав.');
+        requireThat(manager(user) && mode==='live',403,'Завантаження доступне лише в робочому режимі.');
         const type = Object.hasOwn(fileTypes,data.extension) && fileTypes[data.extension];
         requireThat(type && typeof data.base64==='string' && /^[A-Za-z0-9+/]+={0,2}$/.test(data.base64),400,'Виберіть JPEG, PNG або WebP.');
         const bytes = Buffer.from(data.base64,'base64');

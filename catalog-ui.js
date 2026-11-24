@@ -1,4 +1,43 @@
 (() => {
+  const {catalog,element,money,productStatus} = window.slx;
+  catalog().then(({ ready,sales,products }) => {
+    if (!ready) return;
+    const byId = new Map(products.map(item => [item.id,item]));
+    for (const container of document.querySelectorAll('[data-catalog-item]')) {
+      const item = byId.get(container.dataset.catalogItem);
+      if (!item) continue;
+      container.querySelector('[data-stock]').textContent = productStatus[item.status];
+      const price = container.querySelector('[data-display-price]');
+      price.hidden = !sales || item.price === null;
+      if (!price.hidden) {
+        price.textContent = money(item.price);
+        container.dataset.price = item.price;
+      }
+      const cover = container.querySelector('.inventory-photo img, .product-photo img');
+      if (item.photo && cover) {
+        cover.src = item.photo;
+        const first = container.querySelector('[data-gallery-src]');
+        if (first) {
+          first.dataset.gallerySrc = item.photo;
+          first.querySelector('img').src = item.photo;
+        }
+      }
+      const variants = container.querySelector('[data-choices]');
+      if (!variants) continue;
+      variants.replaceChildren();
+      for (const [key,label,options] of [['size','Розмір',item.sizes],['color','Колір',item.colors]]) {
+        if (!options.length) continue;
+        const select = element('select',{});
+        select.dataset.variant = key;
+        select.append(new Option('Обрати',''),...options.map(option=>new Option(option,option)));
+        variants.append(element('label',{},label,select));
+      }
+      const add = container.querySelector('[data-cart-add]');
+      add.hidden = item.status === 'sold-out';
+      add.textContent = sales && item.status === 'available' ? 'Додати в кошик' : 'До списку покупок';
+      container.querySelector('[data-notify]').hidden = item.status !== 'coming-soon';
+    }
+  });
   for (const section of document.querySelectorAll('.inventory')) {
     const grid = section.querySelector('[data-inventory-grid]');
     const filter = section.querySelector('[data-filter]');

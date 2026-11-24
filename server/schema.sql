@@ -75,12 +75,16 @@ CREATE TABLE IF NOT EXISTS slx_referral_entries (
 CREATE TABLE IF NOT EXISTS slx_interests (
   id uuid PRIMARY KEY, email text NOT NULL, product text NOT NULL,
   size text NOT NULL DEFAULT '', color text NOT NULL DEFAULT '',
+  delivery_key uuid NOT NULL,
   unsubscribe_hash text NOT NULL UNIQUE,
   status text NOT NULL CHECK(status IN ('pending','sending','sent','unsubscribed')),
   created_at timestamptz NOT NULL DEFAULT now(),
   sent_at timestamptz,
   UNIQUE(email,product,size,color)
 );
+ALTER TABLE slx_interests ADD COLUMN IF NOT EXISTS delivery_key uuid;
+UPDATE slx_interests SET delivery_key=id WHERE delivery_key IS NULL;
+ALTER TABLE slx_interests ALTER COLUMN delivery_key SET NOT NULL;
 CREATE TABLE IF NOT EXISTS slx_audit (
   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   actor_id uuid REFERENCES slx_users(id),
