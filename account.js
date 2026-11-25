@@ -74,11 +74,20 @@
       if (!orders.length) root.append(element('p',{className:'muted'},'У вас ще немає замовлень.'));
       for (const order of orders) {
         const history = (order.events ?? []).map(event=>element('li',{},`${date.format(new Date(event.at))} · ${orderStatus[event.status]}`));
+        let requestReturn;
+        if (['delivered','completed'].includes(order.status) && user.role==='customer') {
+          const status=state('');
+          requestReturn=element('form',{className:'interest-form'},
+            element('label',{},'Причина повернення',element('textarea',{name:'reason',maxLength:500,required:true})),
+            element('button',{className:'secondary',type:'submit'},'Надіслати запит на повернення'),status);
+          submit(requestReturn,status,body=>api('order-return',{body:{id:order.id,expectedStatus:order.status,reason:body.reason}}),render);
+        }
         root.append(element('details',{className:'ops-card'},
           element('summary',{},`${orderStatus[order.status]} · ${date.format(new Date(order.created_at))} · ${money(order.subtotal)}`),
           element('p',{className:'muted'},order.id),
+          order.advance!=null ? element('p',{className:'muted'},`Передоплата: ${money(order.advance)} · залишок: ${money(Number(order.subtotal)-Number(order.advance))}`) : null,
           element('ul',{},order.items.map(item=>element('li',{},[item.name,item.size,item.color,`×${item.quantity}`].filter(Boolean).join(' · ')))),
-          order.tracking ? element('p',{},`ТТН: ${order.tracking}`) : null,element('ol',{},history)));
+          order.tracking ? element('p',{},`ТТН: ${order.tracking}`) : null,element('ol',{},history),requestReturn));
       }
     } catch (error) { root.replaceChildren(state(error.message)); }
   }

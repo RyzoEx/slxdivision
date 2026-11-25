@@ -17,7 +17,8 @@
 .account-panel { padding-block:18px clamp(48px,7vw,86px); display:grid; gap:13px; justify-items:start; }
 .account-panel form { width:min(100%,440px); }
 .account-panel label, .ops label { display:grid; gap:6px; font-size:.875rem; }
-.account-panel input, .ops input:not([type="checkbox"]), .ops select, .ops textarea {
+.account-panel input:not([type="checkbox"]), .ops input:not([type="checkbox"]), .ops select, .ops textarea,
+.interest-form textarea, .interest-form select {
   min-width:0; width:100%; padding:8px 10px; min-height:44px; border:1px solid #666; border-radius:6px;
   color:var(--paper); background:#141414; font:inherit;
 }
@@ -43,6 +44,11 @@
 .ops-form > .primary { justify-self:start; }
 .ops-form .ops-check { display:flex; align-items:center; min-height:44px; }
 .ops-check input { width:19px; height:19px; }
+.ops-check { gap:8px; }
+.interest-form .ops-check { display:flex; align-items:center; }
+.ops-form textarea, .interest-form textarea { width:100%; min-height:5rem; resize:vertical; }
+.ops-card progress { display:block; width:min(100%,24rem); margin-block:8px; accent-color:var(--paper); }
+.ops-timeline li { overflow-wrap:anywhere; }
 .ops-product { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
 .ops-product img { height:64px; object-fit:contain; border-radius:5px; background:#1d1d1d; }
 .test-order-rows { grid-column:1/-1; display:grid; gap:8px; }

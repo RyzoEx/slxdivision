@@ -122,13 +122,17 @@
     if (view!==cartRender || !dialog.open || dialog.dataset.kind!=='cart') return;
     const mapped = new Map((data.ready ? data.products : products).map(item=>[item.id,item]));
     let total = 0;
+    let advance = 0;
     let complete = data.sales;
     for (const [index,line] of lines.entries()) {
       const item = mapped.get(line.id);
       const enabled = item?.status === 'available' && item.price > 0
         && item.sizes.includes(line.size) && item.colors.includes(line.color);
       complete &&= Boolean(enabled);
-      if (enabled) total += item.price*line.quantity;
+      if (enabled) {
+        total += item.price*line.quantity;
+        advance += item.advance*line.quantity;
+      }
       const quantity = element('input',{type:'number',min:'1',max:'10',value:String(line.quantity)});
       quantity.setAttribute('aria-label',`Кількість: ${item?.name ?? line.id}`);
       quantity.addEventListener('change',()=>{
@@ -157,7 +161,10 @@
       return;
     }
     if (!complete) return;
-    content.append(element('p',{},`Разом: ${money(total)}`));
+    content.append(element('p',{},`Вартість товарів: ${money(total)}`),
+      element('p',{},`Часткова передоплата: ${money(advance)}`),
+      element('p',{},`Залишок при отриманні: ${money(total-advance)}`),
+      element('p',{className:'muted'},'Доставка за тарифами Нової пошти.'));
     const checkout = element('button',{type:'button',className:'primary'},'Оформити запит');
     content.append(checkout);
     checkout.addEventListener('click',async()=>{
@@ -169,9 +176,21 @@
         return;
       }
       const form = element('form',{className:'interest-form'});
-      for (const [name,label,required] of [['name','Ім’я',true],['phone','Телефон',true],['city','Місто',true],['point','Відділення або адреса',true],['referral','Код SLX Circle',false]]) {
-        form.append(element('label',{},label,element('input',{name,required})));
+      for (const [name,label,options] of [
+        ['name','Ім’я та прізвище',{required:true,autocomplete:'name',maxLength:100}],
+        ['phone','Номер телефону',{required:true,type:'tel',autocomplete:'tel',maxLength:24}],
+        ['contact','Email або Telegram',{required:true,value:account.user.email,maxLength:180}],
+        ['city','Місто',{required:true,maxLength:100}],
+        ['point','Відділення або поштомат Нової пошти',{required:true,maxLength:120}],
+        ['referral','Код Contributor',{maxLength:24}],
+      ]) {
+        form.append(element('label',{},label,element('input',{name,...options})));
       }
+      const payment=element('select',{name:'payment',required:true},new Option('Часткова передоплата та решта при отриманні','advance_and_on_delivery'));
+      form.append(element('label',{},'Коментар до замовлення',element('textarea',{name:'comment',maxLength:600})),
+        element('label',{},'Спосіб оплати',payment),
+        element('a',{href:'payment-delivery-returns.html',target:'_blank',rel:'noopener',className:'detail-link'},'Оплата, доставка та повернення'),
+        element('label',{className:'ops-check'},element('input',{type:'checkbox',name:'termsAccepted',required:true}),'Я ознайомився / ознайомилася з умовами'));
       const send = element('button',{type:'submit',className:'primary'},'Надіслати без оплати');
       const result = element('p',{});
       result.setAttribute('role','status');
@@ -180,7 +199,8 @@
       form.addEventListener('submit',async event=>{
         event.preventDefault();
         send.disabled = true;
-        const {referral,...delivery} = Object.fromEntries(new FormData(form));
+        const {referral,termsAccepted,...fields} = Object.fromEntries(new FormData(form));
+        const delivery={...fields,termsAccepted:termsAccepted==='on'};
         const fingerprint = JSON.stringify({lines,referral,delivery});
         if (checkoutIntent?.fingerprint !== fingerprint) checkoutIntent = {fingerprint,id:crypto.randomUUID()};
         try {

@@ -1,4 +1,4 @@
-import { costKeys, settings } from './orders.mjs';
+import { costKeys } from './orders.mjs';
 import { requireThat } from './security.mjs';
 
 const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(value ?? '')
@@ -8,11 +8,11 @@ export async function report(db, mode, from, to) {
   requireThat(Date.parse(to) - Date.parse(from) <= 366 * 86400000,400,'Оберіть період не довший за рік.');
   const { rows } = await db.query(`WITH bounds AS (
     SELECT $2::date::timestamp AT TIME ZONE 'Europe/Kyiv' AS start_at, ($3::date+1)::timestamp AT TIME ZONE 'Europe/Kyiv' AS end_at
-  ) SELECT id,paid_at,refunded_at,subtotal,financials,
-    (paid_at>=start_at AND paid_at<end_at) AS paid_in_period,
+  ) SELECT id,closed_at,refunded_at,subtotal,advance,financials,resolution,
+    (COALESCE(closed_at,refunded_at)>=start_at AND COALESCE(closed_at,refunded_at)<end_at) AS recognized_in_period,
     (refunded_at>=start_at AND refunded_at<end_at) AS refunded_in_period
     FROM slx_orders,bounds WHERE mode=$1 AND (
-    (paid_at>=start_at AND paid_at<end_at) OR (refunded_at>=start_at AND refunded_at<end_at))`,[mode,from,to]);
+    (closed_at>=start_at AND closed_at<end_at) OR (refunded_at>=start_at AND refunded_at<end_at))`,[mode,from,to]);
   const referralRows = (await db.query(`SELECT e.order_id,SUM(CASE WHEN e.kind='credit' THEN e.amount ELSE -e.amount END) AS amount
     FROM slx_referral_entries e JOIN slx_orders o ON o.id=e.order_id
     WHERE o.mode=$1 AND e.created_at>=($2::date::timestamp AT TIME ZONE 'Europe/Kyiv')
@@ -24,11 +24,11 @@ export async function report(db, mode, from, to) {
   };
   for (const order of rows) {
     const entry = line(order.id);
-    if (order.paid_in_period) {
-      entry.revenue = Number(order.subtotal);
+    if (order.recognized_in_period) {
+      entry.revenue = Number(order.closed_at ? order.subtotal : order.advance ?? order.subtotal);
       for (const key of costKeys) entry[key] = Number(order.financials[key] ?? 0);
     }
-    if (order.refunded_in_period) entry.refunds = Number(order.subtotal);
+    if (order.refunded_in_period) entry.refunds = Number(order.resolution?.refund ?? order.subtotal);
   }
   for (const referral of referralRows) line(referral.order_id).referrals = Number(referral.amount);
   const totals = line('total');
@@ -36,11 +36,8 @@ export async function report(db, mode, from, to) {
     if (id !== 'total') for (const key of Object.keys(totals)) totals[key] += entry[key];
     entry.profit = entry.revenue - entry.refunds - costKeys.reduce((sum,key) => sum + entry[key],0) - entry.referrals;
   }
-  const config = await settings(db);
-  const share = Math.round(Math.max(0,totals.profit) * config.founder_share_bps / 10000);
-  const founder = {first:share, second:Math.max(0,totals.profit) - share};
   detail.delete('total');
-  return {mode,from,to,totals,founder,details:[...detail].map(([id,entry]) => ({id,...entry}))};
+  return {mode,from,to,totals,details:[...detail].map(([id,entry]) => ({id,...entry}))};
 }
 export function csv(report) {
   const columns = ['revenue','refunds',...costKeys,'referrals','profit'];
@@ -49,7 +46,5 @@ export function csv(report) {
     ['mode','from','to','order_id',...columns].join(','),
     ...report.details.map(row => [report.mode,report.from,report.to,row.id,...columns.map(key => amount(row[key]))].join(',')),
     [report.mode,report.from,report.to,'TOTAL',...columns.map(key => amount(report.totals[key]))].join(','),
-    `founder_1,${amount(report.founder.first)}`,
-    `founder_2,${amount(report.founder.second)}`,
   ].join('\r\n') + '\r\n';
 }

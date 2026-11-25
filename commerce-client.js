@@ -2,7 +2,8 @@
   const currency = new Intl.NumberFormat('uk-UA',{style:'currency',currency:'UAH'});
   const orderStatus = {
     new:'Нове', availability_check:'Перевірка наявності', awaiting_payment:'Очікує оплати',
-    paid:'Оплачено', sent_to_manufacturer:'Передано виробнику', in_production:'У виробництві',
+    paid:'Передоплату перевірено', sent_to_manufacturer:'Передано виробнику', in_production:'У виробництві',
+    preparing_shipment:'Готується до відправлення', completed:'Завершено', return_requested:'Запит на повернення',
     shipped:'Відправлено', delivered:'Доставлено', cancelled:'Скасовано', returned:'Повернено',
     defective:'Брак', unclaimed:'Не отримано',
   };

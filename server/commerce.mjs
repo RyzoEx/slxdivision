@@ -1,8 +1,11 @@
 import { adminPage } from './admin-shell.mjs';
 import { changeRole, login, logout, requestOtp, verifyOtp } from './auth.mjs';
 import { audit, catalog, changeOrder, collectionsSource, createOrder, listOrders, productsSource, readyForSale,
-  referrals, setProduct, setReferral, settings, statuses, updateSettings } from './orders.mjs';
+  launchChecks, manualPrepaymentAllowed, referrals, setManufacturer, setPricing, setProduct, setReferral, settings, statuses, updateSettings, uuid } from './orders.mjs';
 import { csv, report } from './finance.mjs';
+import { manufacturers } from './pricing.mjs';
+import { funds, transferFunds } from './shared-funds.mjs';
+import { cronAuthorized, dailyDigest, deliverTelegram, telegramReady } from './telegram.mjs';
 import { interest, notifyLaunch, unsubscribe } from './interests.mjs';
 import { launchMailReady } from './launch-mail.mjs';
 import { currentUser, Failure, isAdmin, newId, readJson, requireThat, text, throttle } from './security.mjs';
@@ -20,25 +23,32 @@ const fileTypes = {
 };
 function exposeOrder(order,user) {
   if (manager(user)) return order;
-  const {financials,subtotal,referral_bps,referral_code,items,...rest} = order;
-  return {...rest,items:items.map(({price,...item})=>item)};
+  const {financials,subtotal,advance,referral_bps,referral_code,referral_fixed,resolution,items,...rest} = order;
+  return {...rest,items:items.map(({price,advance,...item})=>item)};
 }
 function adminMetadata(user, config, items, env, auth) {
   return {
     user, statuses, sales:config.sales && readyForSale(config,items,env), modeReady:readyForSale(config,items,env),
     storageReady:auth.storageReady, canNotify:launchMailReady(env),
+    telegramReady:telegramReady(env),
   };
 }
 
 export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch }) {
   return async request => {
     const url = new URL(request.url);
-    const op = url.pathname === '/admin' ? 'admin-page' : url.searchParams.get('op');
+    const op = url.pathname === '/admin' ? 'admin-page' : url.pathname === '/api/telegram-daily' ? 'telegram-cron' : url.searchParams.get('op');
     const get = request.method === 'GET';
     const origin = url.origin;
     const secure = !local || url.protocol === 'https:';
     try {
       if (op === 'catalog' && get && !db) return json({ready:false,sales:false,products:[]});
+      if (op==='telegram-cron') {
+        requireThat(get && cronAuthorized(env,request.headers.get('authorization')),401,'Потрібна авторизація.');
+        if (!db || !telegramReady(env)) return json({configured:false});
+        await dailyDigest(db,day=>report(db,'live',day,day));
+        return json({sent:await deliverTelegram(db,env,fetcher)});
+      }
       requireThat(db,503,'База даних SLX ще не налаштована.');
       const user = await currentUser(db,request,secure);
       if (op === 'admin-page' && get) {
@@ -51,8 +61,9 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       if (op === 'catalog' && get) {
         const [config,products] = await Promise.all([settings(db),catalog(db)]);
         const sales = config.sales && readyForSale(config,products,env);
-        return json({ready:true,sales,products:products.map(item => ({
-          ...item,status:!sales && item.status==='available' ? 'coming-soon' : item.status,
+        return json({ready:true,sales,products:products.map(({pricing,manufacturerId,...item}) => ({
+          ...item,price:sales ? item.price : null,status:!sales && item.status==='available' ? 'coming-soon' : item.status,
+          ...(sales && item.status==='available' ? {advance:pricing.advance} : {}),
           photo:item.photo ? `/api/commerce?op=media&key=${item.photo}` : '',
         }))});
       }
@@ -66,10 +77,12 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       if (op === 'account' && get) {
         const authReady = auth.authReady && env.SLX_CUSTOMER_OTP_ENABLED === '1';
         if (!user) return json({user:null,orders:[],authReady});
-        const {rows:orders} = await db.query(`SELECT id,status,items,subtotal,created_at,manufacturing->>'tracking' AS tracking,
+        const {rows:orders} = await db.query(`SELECT id,status,items,subtotal,advance,created_at,
+          CASE WHEN EXISTS(SELECT 1 FROM slx_order_events WHERE order_id=slx_orders.id AND status='shipped')
+            THEN manufacturing->>'tracking' END AS tracking,
           (SELECT jsonb_agg(jsonb_build_object('status',status,'at',created_at) ORDER BY id) FROM slx_order_events WHERE order_id=slx_orders.id) AS events
           FROM slx_orders WHERE mode='live' AND user_id=$1 ORDER BY created_at DESC LIMIT 100`,[user.id]);
-        return json({user,orders,authReady});
+        return json({user,authReady,orders:orders.map(order=>({...order,items:order.items.map(({manufacturerId,...item})=>item)}))});
       }
 
       const mode = url.searchParams.get('mode') ?? 'test';
@@ -83,7 +96,17 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       }
       if (op === 'admin-products' && get) {
         requireThat(manager(user),403,'Недостатньо прав.');
-        return json({products:await catalog(db),storageReady:auth.storageReady,canNotify:launchMailReady(env)});
+        const [items,partners,config]=await Promise.all([catalog(db),manufacturers(db),settings(db)]);
+        return json({products:items,manufacturers:partners.map(({id,name})=>({id,name})),reserveBps:config.reserve_bps ?? 0,
+          storageReady:auth.storageReady,canNotify:launchMailReady(env)});
+      }
+      if (op==='admin-manufacturers' && get) {
+        requireThat(manager(user),403,'Недостатньо прав.');
+        return json({manufacturers:await manufacturers(db)});
+      }
+      if (op==='admin-funds' && get) {
+        requireThat(manager(user),403,'Недостатньо прав.');
+        return json(await funds(db,mode,await settings(db)));
       }
       if (op === 'admin-collections' && get) {
         requireThat(manager(user),403,'Недостатньо прав.');
@@ -93,8 +116,11 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
           count:productsSource.filter(item=>item.collection===id).length}))});
       }
       if (['admin-orders','admin-manufacturing'].includes(op) && get) {
-        return json({orders:(await listOrders(db,mode)).map(order=>exposeOrder(order,user)),
-          ...(mode==='test' && manager(user) ? {products:await catalog(db)} : {})});
+        const items=mode==='test' && manager(user) || mode==='live' && env.SLX_ALLOW_MANUAL_PREPAYMENT==='1' ? await catalog(db) : [];
+        const allowManual=mode==='live' && items.length>0 && manualPrepaymentAllowed(await settings(db),items,env);
+        const [orders,partners]=await Promise.all([listOrders(db,mode,allowManual),manufacturers(db)]);
+        return json({orders:orders.map(order=>exposeOrder(order,user)),manufacturers:partners.map(({id,name})=>({id,name})),
+          ...(mode==='test' && manager(user) ? {products:items} : {})});
       }
       if (op === 'admin-customers' && get) {
         requireThat(manager(user),403,'Недостатньо прав.');
@@ -118,7 +144,7 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
         requireThat(user.role==='owner',403,'Налаштування доступні лише власнику.');
         const {rows:staff} = await db.query("SELECT id,email,role,active FROM slx_users WHERE role<>'customer' ORDER BY email");
         const config = await settings(db);
-        return json({config,staff,envAllowsSales:env.VERCEL_ENV === 'production' && env.SLX_ALLOW_LIVE_ORDERS==='1'});
+        return json({config,staff,launchChecks,telegramReady:telegramReady(env),envAllowsSales:env.VERCEL_ENV === 'production' && env.SLX_ALLOW_LIVE_ORDERS==='1'});
       }
 
       requireThat(request.method==='POST',404,'Маршрут не знайдено.');
@@ -137,13 +163,43 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       if (op==='order') {
         requireThat(user?.role==='customer',401,'Підтвердьте вхід у кабінет покупця.');
         await throttle(db,`order-user:${user.id}`,18,15);
-        return json(await createOrder(db,user,'live',data,env),201);
+        const result=await createOrder(db,user,'live',data,env);
+        await deliverTelegram(db,env,fetcher);
+        return json(result,201);
+      }
+      if (op==='order-return') {
+        requireThat(user?.role==='customer',401,'Підтвердьте вхід у кабінет покупця.');
+        await throttle(db,`return-user:${user.id}`,10,15);
+        const result=await changeOrder(db,user,'live',{id:data.id,expectedStatus:data.expectedStatus,status:'return_requested',reason:data.reason});
+        await deliverTelegram(db,env,fetcher);
+        return json(result);
       }
       if (op==='admin-test-order') {
         requireThat(manager(user) && mode==='test',403,'Тестові замовлення доступні лише команді в тестовому режимі.');
         return json(await createOrder(db,user,'test',data,env),201);
       }
-      if (op==='admin-order') return json(await changeOrder(db,user,mode,data));
+      if (op==='admin-order') {
+        const result=await changeOrder(db,user,mode,data,env);
+        if (mode==='live') await deliverTelegram(db,env,fetcher);
+        return json(result);
+      }
+      if (op==='admin-pricing') {
+        requireThat(manager(user) && (mode==='live' || data.preview===true),403,'Потрібен доступ до робочого каталогу.');
+        return json(await setPricing(db,user,data,env));
+      }
+      if (op==='admin-manufacturer') {
+        requireThat(manager(user) && mode==='live',403,'Потрібен доступ до робочих налаштувань.');
+        return json(await setManufacturer(db,user,data));
+      }
+      if (op==='admin-funds-transfer') {
+        requireThat(user.role==='owner',403,'Перекази доступні лише власнику.');
+        requireThat(uuid(data.requestId),400,'Повторіть переказ.');
+        await db.transaction(async tx=>{
+          await settings(tx,true);
+          if (await transferFunds(tx,user,mode,data)) await audit(tx,user,'funds.transfer',data.requestId);
+        });
+        return json({ok:true});
+      }
       if (op==='admin-product') {
         requireThat(manager(user) && mode==='live',403,'Публічний каталог редагується лише в робочому режимі.');
         return json(await setProduct(db,user,data,env));

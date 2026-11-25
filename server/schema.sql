@@ -23,13 +23,16 @@ CREATE TABLE IF NOT EXISTS slx_settings (
   data jsonb NOT NULL
 );
 INSERT INTO slx_settings (id, data) VALUES
-  (1, '{"sales":false,"founder_share_bps":5000,"referral_bps":500,"manufacturer_ready":false,"terms_ready":false}')
+  (1, '{"sales":false,"referral_bps":500,"reserve_bps":0,"fund_goal":null,"manufacturer_ready":false,"terms_ready":false}')
 ON CONFLICT (id) DO NOTHING;
 CREATE TABLE IF NOT EXISTS slx_products (
   id text PRIMARY KEY, data jsonb NOT NULL
 );
 CREATE TABLE IF NOT EXISTS slx_collections (
   id text PRIMARY KEY, data jsonb NOT NULL
+);
+CREATE TABLE IF NOT EXISTS slx_manufacturers (
+  id uuid PRIMARY KEY, data jsonb NOT NULL
 );
 CREATE TABLE IF NOT EXISTS slx_referrals (
   code text NOT NULL, mode text NOT NULL CHECK(mode IN ('test','live')),
@@ -55,6 +58,31 @@ CREATE TABLE IF NOT EXISTS slx_orders (
   closed_at timestamptz,
   refunded_at timestamptz,
   FOREIGN KEY(mode,referral_code) REFERENCES slx_referrals(mode,code)
+);
+ALTER TABLE slx_referrals ADD COLUMN IF NOT EXISTS fixed_amount bigint CHECK(fixed_amount >= 0);
+ALTER TABLE slx_orders ADD COLUMN IF NOT EXISTS referral_fixed bigint CHECK(referral_fixed >= 0);
+ALTER TABLE slx_orders ADD COLUMN IF NOT EXISTS advance bigint CHECK(advance >= 0);
+ALTER TABLE slx_orders ADD COLUMN IF NOT EXISTS resolution jsonb NOT NULL DEFAULT '{}';
+CREATE TABLE IF NOT EXISTS slx_balance_entries (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  mode text NOT NULL CHECK(mode IN ('test','live')),
+  event_key text NOT NULL UNIQUE,
+  actor_id uuid REFERENCES slx_users(id),
+  order_id uuid REFERENCES slx_orders(id),
+  kind text NOT NULL CHECK(kind IN ('completion','refund','transfer')),
+  balance_delta bigint NOT NULL,
+  reserve_delta bigint NOT NULL,
+  fund_delta bigint NOT NULL,
+  note text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS slx_balance_entries_mode_date ON slx_balance_entries(mode,created_at DESC,id DESC);
+CREATE TABLE IF NOT EXISTS slx_telegram_outbox (
+  event_key text PRIMARY KEY,
+  message text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  claimed_at timestamptz,
+  sent_at timestamptz
 );
 CREATE INDEX IF NOT EXISTS slx_orders_mode_created ON slx_orders(mode,created_at DESC);
 CREATE INDEX IF NOT EXISTS slx_orders_user ON slx_orders(user_id,mode);
@@ -103,3 +131,6 @@ ALTER TABLE slx_order_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE slx_referral_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE slx_interests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE slx_audit ENABLE ROW LEVEL SECURITY;
+ALTER TABLE slx_manufacturers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE slx_balance_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE slx_telegram_outbox ENABLE ROW LEVEL SECURITY;
