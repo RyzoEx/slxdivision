@@ -51,13 +51,23 @@ if (!localPages) {
   for (const file of ['style.css', 'commerce.css', 'commerce-client.js', 'account.js', 'admin-ui.js', 'intro-start.js', 'metrics.js', 'experience.js', 'metrics.html', '404.html', 'storefront.js', 'catalog-ui.js']) {
     copyFileSync(path.join(root, file), path.join(output, file));
   }
+  if (origin) {
+    for (const file of readdirSync(root, { withFileTypes:true })) {
+      if (!file.isFile() || !/^google[0-9a-f]+\.html$/.test(file.name)) continue;
+      const source = path.join(root,file.name);
+      if (readFileSync(source,'utf8').trim() !== `google-site-verification: ${file.name}`) {
+        throw new Error(`Unexpected Google verification file content: ${file.name}`);
+      }
+      copyFileSync(source,path.join(output,file.name));
+    }
+  }
   for (const group of ['brand', 'fonts']) {
     const source = path.join(root, 'assets', group);
     const destination = path.join(output, 'assets', group);
     if (realpathSync(source) !== source) throw new Error(`Unexpected asset directory: ${group}`);
     mkdirSync(destination, { recursive: true });
     for (const asset of readdirSync(source, { withFileTypes: true })) {
-      if (asset.isFile() && /\.(webp|jpg|woff2|txt)$/.test(asset.name)) {
+      if (asset.isFile() && /\.(webp|jpg|png|woff2|txt)$/.test(asset.name)) {
         copyFileSync(path.join(source, asset.name), path.join(destination, asset.name));
       }
     }
@@ -69,16 +79,27 @@ if (!localPages) {
   }
 }
 const url = file => origin ? `${origin}/${file}` : file;
+const brandImage = { src:'assets/brand/logo.webp', alt:'Орбітальна емблема SLX' };
+const jsonLd = data => `<script type="application/ld+json">${JSON.stringify(data).replace(/</g,'\\u003c')}</script>`;
+const shareImage = (image = brandImage) => `<meta property="og:image" content="${escape(url(image.src))}">
+<meta property="og:image:alt" content="${escape(image.alt)}">
+<meta name="twitter:card" content="summary_large_image">`;
 const searchIndex = catalog.activeProducts.map(({ id, name, category, status, sizes, colors, photos }) =>
   ({ id, name, category, status:status==='available' ? 'coming-soon' : status, sizes:sizes ?? [], colors:colors ?? [], src:photos[0].src, price:null }));
 writePage('catalog-index.js', `window.SLX_CATALOG = ${JSON.stringify(searchIndex)};\n`);
 
 const homeCanonical = origin
-  ? `  <link rel="canonical" href="${origin}/">\n  <meta property="og:url" content="${origin}/">\n`
+  ? `  <link rel="canonical" href="${url('')}">
+  <meta property="og:url" content="${url('')}">
+  ${jsonLd({ '@context':'https://schema.org', '@graph':[
+    { '@type':'WebSite', name:'SLX Division', alternateName:'SLX', url:url('') },
+    { '@type':'Organization', name:'SLX Division', alternateName:'SLX', url:url(''),
+      logo:url(brandImage.src), ...(settings.email ? { email:settings.email } : {}) },
+  ] })}\n`
   : '  <meta name="robots" content="noindex">\n';
 const home = readFileSync(path.join(root, 'index.html'), 'utf8')
   .replace(/  <!-- SEO origin start -->[\s\S]*?  <!-- SEO origin end -->/, () =>
-    `  <!-- SEO origin start -->\n${homeCanonical}  <meta property="og:image" content="${url('assets/brand/logo.webp')}">\n${liveSubscriptions ? `  ${liveSubscriptions}\n` : ''}  <!-- SEO origin end -->`)
+    `  <!-- SEO origin start -->\n${homeCanonical}  ${shareImage()}\n${liveSubscriptions ? `  ${liveSubscriptions}\n` : ''}  <!-- SEO origin end -->`)
   .replace(/<!-- SITE HEADER START -->[\s\S]*?<!-- SITE HEADER END -->/, () => `<!-- SITE HEADER START -->\n${header(true)}\n<!-- SITE HEADER END -->`)
   .replace(/<!-- SITE FOOTER START -->[\s\S]*?<!-- SITE FOOTER END -->/, () => `<!-- SITE FOOTER START -->\n${footer(settings)}\n<!-- SITE FOOTER END -->`)
   .replace(/<!-- SITE INVENTORY START -->[\s\S]*?<!-- SITE INVENTORY END -->/, () => {
@@ -92,17 +113,28 @@ writePage('index.html', home);
 const pages = { ...editorial({ settings, catalog }), ...inventoryPages(catalog) };
 
 for (const [file, page] of Object.entries(pages)) {
+  const indexable = origin && !page.noindex;
+  const title = `${page.seoTitle ?? page.title} | SLX Division`;
+  const breadcrumbs = page.trail && jsonLd({
+    '@context':'https://schema.org', '@type':'BreadcrumbList',
+    itemListElement:[['Головна',''], ...page.trail, [page.title,file]].map(([name, target], index) => ({
+      '@type':'ListItem', position:index+1, name, item:url(target),
+    })),
+  });
   writePage(file, `<!doctype html>
 <html lang="uk">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escape(page.title)} | SLX</title><meta name="description" content="${escape(page.desc)}">
-${origin && !page.private ? `<link rel="canonical" href="${url(file)}">` : '<meta name="robots" content="noindex">'}
+<title>${escape(title)}</title><meta name="description" content="${escape(page.desc)}">
+${indexable ? `<link rel="canonical" href="${url(file)}">\n<meta property="og:url" content="${url(file)}">` : '<meta name="robots" content="noindex">'}
 ${liveSubscriptions}
-<meta property="og:title" content="${escape(page.title)} | SLX">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="uk_UA">
+<meta property="og:site_name" content="SLX Division">
+<meta property="og:title" content="${escape(title)}">
 <meta property="og:description" content="${escape(page.desc)}">
-<meta property="og:image" content="${escape(url(page.image?.src ?? 'assets/brand/logo.webp'))}">
-${page.structured ? `<script type="application/ld+json">${JSON.stringify(page.structured).replace(/</g, '\\u003c')}</script>` : ''}
-<link rel="stylesheet" href="style.css"><link rel="stylesheet" href="commerce.css"><link rel="icon" href="assets/brand/logo.webp">
+${shareImage(page.image)}
+${indexable && breadcrumbs ? breadcrumbs : ''}
+<link rel="stylesheet" href="style.css"><link rel="stylesheet" href="commerce.css"><link rel="icon" href="/assets/brand/favicon.png" sizes="96x96" type="image/png">
 <script src="catalog-index.js" defer></script><script src="commerce-client.js" defer></script><script src="metrics.js" defer></script><script src="storefront.js" defer></script><script src="catalog-ui.js" defer></script>
 ${page.script ? `<script src="${page.script}" defer></script>` : ''}
 </head>
@@ -115,7 +147,12 @@ ${footer(settings)}
 
 
 if (origin) {
-  const files = ['', ...Object.keys(pages).filter(file => !pages[file].private)];
-  writePage('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${files.map(file => `  <url><loc>${url(file)}</loc></url>`).join('\n')}\n</urlset>\n`);
+  const files = ['', ...Object.keys(pages).filter(file => !pages[file].noindex)];
+  const entries = files.map(file => {
+    const images = new Set(pages[file]?.searchImages?.map(image => image.src));
+    const imageTags = [...images].map(src => `<image:image><image:loc>${escape(url(src))}</image:loc></image:image>`).join('');
+    return `  <url><loc>${escape(url(file))}</loc>${imageTags}</url>`;
+  });
+  writePage('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${entries.join('\n')}\n</urlset>\n`);
   writePage('robots.txt', `User-agent: *\nAllow: /\nSitemap: ${url('sitemap.xml')}\n`);
 }

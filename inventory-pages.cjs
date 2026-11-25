@@ -48,8 +48,11 @@ function productPage(item, collection, related) {
   const specs = Object.entries(item.specifications ?? {});
   return {
     title: item.name,
+    seoTitle: `${item.name} — ${collection.name}`,
     desc: item.description,
     image: item.photos[0],
+    searchImages: item.photos,
+    trail: [...collectionTrail(collection), [collection.name,collectionUrl(collection)]],
     content: `<section class="shell product-layout" data-product-page="${item.id}" ${collection.archived ? '' : `data-catalog-item="${item.id}"`}>
       <div>
         <div class="product-photo">${photo(item.photos[0], 'eager')}<button class="photo-zoom" type="button" data-photo-zoom aria-pressed="false">Наблизити фото</button></div>
@@ -78,6 +81,10 @@ function productPage(item, collection, related) {
   };
 }
 
+function collectionTrail(collection) {
+  return collection.archived ? [['Архів','archive.html']] : [['Колекції','collections.html']];
+}
+
 function inventoryPages({ collections, products }) {
   const pages = {};
   for (const collection of collections) {
@@ -85,8 +92,11 @@ function inventoryPages({ collections, products }) {
     const cover = collection.cover ?? entries[0]?.photos[0];
     pages[collectionUrl(collection)] = {
       title: collection.name,
+      seoTitle: `${collection.name} — колекція вуличного одягу`,
       desc: collection.description ?? `Колекція ${collection.name} від SLX.`,
       image: cover,
+      searchImages: [...(collection.cover ? [collection.cover] : []), ...entries.flatMap(item => item.photos.slice(0,2))],
+      trail: collectionTrail(collection),
       content: `${collection.description ? `<p class="shell collection-description">${escape(collection.description)}</p>` : ''}
         ${collection.cover ? `<div class="shell collection-cover">${photo(collection.cover, 'eager')}</div>` : ''}
         ${grid(entries, { tools: true, archived: collection.archived })}`,

@@ -22,7 +22,7 @@ function header(home = false) {
   return `<header class="header shop-header"><div class="shell header-inner">
     <nav class="shop-nav" aria-label="Основна навігація">${navLinks(links.slice(0, 3))}</nav>
     <button class="icon-button mobile-menu-trigger" type="button" data-panel="menu" aria-label="Меню" aria-haspopup="dialog">${icons.menu}</button>
-    <a class="brand chrome-brand" href="${home ? '#top' : 'index.html'}" aria-label="SLX — на початок"><img src="assets/brand/logo.webp" width="86" height="63" alt="SLX"></a>
+    <a class="brand chrome-brand" href="${home ? '#top' : '/'}" aria-label="SLX — на початок"><img src="assets/brand/logo.webp" width="86" height="63" alt="SLX"></a>
     <div class="header-actions">
       <button class="icon-button" type="button" data-panel="search" aria-label="Пошук" aria-haspopup="dialog">${icons.search}</button>
       <button class="icon-button profile-trigger" type="button" data-panel="profile" aria-label="Профіль" aria-haspopup="dialog">${icons.profile}</button>
@@ -49,7 +49,7 @@ function footer(settings) {
     : '<span class="muted">Контакт опублікуємо перед запуском.</span>';
   return `<footer class="footer site-footer"><div class="shell">
     <div class="footer-top">
-      <div><a class="brand chrome-brand footer-brand" href="index.html" aria-label="SLX — головна"><img src="assets/brand/logo.webp" width="100" height="73" alt="SLX"></a>
+      <div><a class="brand chrome-brand footer-brand" href="/" aria-label="SLX — головна"><img src="assets/brand/logo.webp" width="100" height="73" alt="SLX"></a>
       <p>Незалежний вуличний одяг.</p></div>
       <nav aria-label="Розділи сайту">${navLinks(links)}</nav>
       <div class="footer-social" aria-label="Контакти та соціальні мережі">${socialLinks(settings)}${email}</div>
