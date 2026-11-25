@@ -27,6 +27,7 @@ function loadInventory(root = __dirname) {
   function checkImage(value, field) {
     if (!check(plain(value), field, 'use an object with src and alt')) return;
     string(value.alt, `${field}.alt`, true, 220);
+    if (own(value, 'kind')) check(['photo', 'mockup'].includes(value.kind), `${field}.kind`, 'use photo or mockup');
     if (!check(typeof value.src === 'string' && imagePath.test(value.src),
       `${field}.src`, 'use a lowercase photo path inside assets/collections or assets/products')) return;
     const file = path.join(root, value.src);

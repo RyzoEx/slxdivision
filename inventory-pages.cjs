@@ -8,6 +8,7 @@ const status = {
 const productUrl = item => `product-${item.id}.html`;
 const collectionUrl = item => `collection-${item.id}.html`;
 const photo = (image, loading = 'lazy') => `<img src="${escape(image.src)}" alt="${escape(image.alt)}" loading="${loading}" decoding="async">`;
+const imageLabel = image => image.kind === 'mockup' ? 'Візуалізація дизайну' : '';
 const empty = '<section class="shell empty-page"><p>Пока одягу нема</p></section>';
 const options = (values, label) => `<option value="">${label}</option>${values.map(value =>
   `<option value="${escape(value)}">${escape(value)}</option>`).join('')}`;
@@ -46,6 +47,8 @@ function collectionsPage(collections, products) {
 
 function productPage(item, collection, related) {
   const specs = Object.entries(item.specifications ?? {});
+  const cover = item.photos[0];
+  const caption = imageLabel(cover);
   return {
     title: item.name,
     seoTitle: `${item.name} — ${collection.name}`,
@@ -55,9 +58,10 @@ function productPage(item, collection, related) {
     trail: [...collectionTrail(collection), [collection.name,collectionUrl(collection)]],
     content: `<section class="shell product-layout" data-product-page="${item.id}" ${collection.archived ? '' : `data-catalog-item="${item.id}"`}>
       <div>
-        <div class="product-photo">${photo(item.photos[0], 'eager')}<button class="photo-zoom" type="button" data-photo-zoom aria-pressed="false">Наблизити фото</button></div>
+        <div class="product-photo">${photo(cover, 'eager')}<button class="photo-zoom" type="button" data-photo-zoom aria-pressed="false">Наблизити зображення</button></div>
+        <p class="muted product-image-note" data-gallery-caption${caption ? '' : ' hidden'}>${caption}</p>
         ${item.photos.length > 1 ? `<div class="gallery-thumbnails" role="group" aria-label="Ракурси">${item.photos.map((image, index) =>
-          `<button type="button" data-gallery-src="${escape(image.src)}" data-gallery-alt="${escape(image.alt)}" aria-label="${escape(image.alt)}" aria-pressed="${index === 0}">${photo(image)}</button>`).join('')}</div>` : ''}
+          `<button type="button" data-gallery-src="${escape(image.src)}" data-gallery-alt="${escape(image.alt)}" data-gallery-label="${imageLabel(image)}" aria-label="${escape(image.alt)}" aria-pressed="${index === 0}">${photo(image)}</button>`).join('')}</div>` : ''}
       </div>
       <div class="product-info">
         <a class="detail-link" href="${collectionUrl(collection)}">${escape(collection.name)}</a>
@@ -73,7 +77,13 @@ function productPage(item, collection, related) {
           <button class="secondary" type="button" data-cart-add="${item.id}" ${item.status === 'sold-out' ? 'hidden' : ''}>До списку покупок</button>
           <button class="text-button" type="button" data-favorite="${item.id}" aria-pressed="false">В обране</button>
           <p role="status" data-cart-message></p>
-        </div>` : ''}
+        </div>
+        <section class="made-to-order" aria-label="Виготовлення на замовлення">
+          <h2>Made to Order</h2>
+          <p>Кожен виріб SLX виготовляється після підтвердження замовлення. Ми працюємо за моделлю Made to Order і не створюємо надлишкових запасів.</p>
+          <p>Перед оплатою ми підтверджуємо доступність розміру, остаточну вартість і строк виготовлення. Для запуску виробництва потрібна часткова передоплата. Решту ви сплачуєте при отриманні замовлення Новою поштою.</p>
+          <a class="detail-link" href="payment-delivery-returns.html">Оплата, доставка та повернення</a>
+        </section>` : ''}
         ${specs.length ? `<details><summary>Характеристики</summary><dl>${specs.map(([label, value]) =>
           `<div><dt>${escape(label)}</dt><dd>${escape(value)}</dd></div>`).join('')}</dl></details>` : ''}
       </div>

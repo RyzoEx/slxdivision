@@ -15,11 +15,22 @@
       }
       const cover = container.querySelector('.inventory-photo img, .product-photo img');
       if (item.photo && cover) {
-        cover.src = item.photo;
         const first = container.querySelector('[data-gallery-src]');
+        const alt = `Зображення ${item.name}`;
         if (first) {
           first.dataset.gallerySrc = item.photo;
-          first.querySelector('img').src = item.photo;
+          first.dataset.galleryAlt = alt;
+          first.dataset.galleryLabel = '';
+          first.setAttribute('aria-label', alt);
+          const thumbnail = first.querySelector('img');
+          thumbnail.src = item.photo;
+          thumbnail.alt = alt;
+        }
+        if (!first || first.getAttribute('aria-pressed') === 'true') {
+          cover.src = item.photo;
+          cover.alt = alt;
+          const caption = container.querySelector('[data-gallery-caption]');
+          if (caption) caption.hidden = true;
         }
       }
       const variants = container.querySelector('[data-choices]');
@@ -67,12 +78,13 @@
   if (!product) return;
   const frame = product.querySelector('.product-photo');
   const image = frame.querySelector('img');
+  const caption = product.querySelector('[data-gallery-caption]');
   const zoom = product.querySelector('[data-photo-zoom]');
   const thumbnails = [...product.querySelectorAll('[data-gallery-src]')];
   function setZoom(active) {
     frame.toggleAttribute('data-zoom', active);
     zoom.setAttribute('aria-pressed', String(active));
-    zoom.textContent = active ? 'Зменшити фото' : 'Наблизити фото';
+    zoom.textContent = active ? 'Зменшити зображення' : 'Наблизити зображення';
   }
   zoom.addEventListener('click', () => setZoom(!frame.hasAttribute('data-zoom')));
   for (const button of thumbnails) {
@@ -80,6 +92,8 @@
       setZoom(false);
       image.src = button.dataset.gallerySrc;
       image.alt = button.dataset.galleryAlt;
+      caption.textContent = button.dataset.galleryLabel;
+      caption.hidden = !caption.textContent;
       for (const option of thumbnails) option.setAttribute('aria-pressed', String(option === button));
     });
   }

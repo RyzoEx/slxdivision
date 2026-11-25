@@ -152,7 +152,8 @@
         element('div',{className:'cart-actions'},quantity,remove)));
     }
     if (!data.sales) {
-      content.append(element('p',{className:'muted'},'Передзапуск. Речі збережено у списку покупок.'));
+      content.append(element('p',{className:'muted'},'Передзапуск. Речі збережено у списку покупок.'),
+        element('a',{className:'detail-link',href:'payment-delivery-returns.html'},'Оплата, доставка та повернення'));
       return;
     }
     if (!complete) return;
