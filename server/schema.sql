@@ -14,6 +14,12 @@ CREATE TABLE IF NOT EXISTS slx_sessions (
   user_id uuid NOT NULL REFERENCES slx_users(id) ON DELETE CASCADE,
   expires_at timestamptz NOT NULL
 );
+CREATE TABLE IF NOT EXISTS slx_preview_credentials (
+  user_id uuid PRIMARY KEY REFERENCES slx_users(id) ON DELETE CASCADE,
+  salt text NOT NULL,
+  password_hash text NOT NULL
+);
+ALTER TABLE slx_preview_credentials ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS slx_sessions_expiry ON slx_sessions(expires_at);
 CREATE TABLE IF NOT EXISTS slx_rate (
   key text PRIMARY KEY, count integer NOT NULL, until_at timestamptz NOT NULL

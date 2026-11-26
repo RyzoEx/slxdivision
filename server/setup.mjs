@@ -1,37 +1,19 @@
-import { openPostgres, migrate } from './db.mjs';
+import { openPostgres, previewDatabase, migrate } from './db.mjs';
+import { provisionPreviewStaff } from './preview-auth.mjs';
 import { emailAddress } from './security.mjs';
 import { uuid } from './orders.mjs';
 import { supabaseConfig, supabaseServerHeaders } from './supabase.mjs';
 
 const [action,id,email,role] = process.argv.slice(2);
-const preview = action === 'migrate-preview';
-
-function databaseTarget(connectionString) {
-  let url;
-  try { url = new URL(connectionString); } catch {}
-  if (!url || !['postgres:', 'postgresql:'].includes(url.protocol) || !url.hostname) {
-    throw new Error('Set a valid PostgreSQL connection URL.');
-  }
-  const host = url.hostname.toLowerCase();
-  const project = /^db\.([a-z0-9]+)\.supabase\.co$/.exec(host)?.[1]
-    ?? (host.endsWith('.pooler.supabase.com') ? /\.([a-z0-9]+)$/.exec(url.username)?.[1] : null);
-  return project ? `supabase:${project}` : host;
-}
-
-const productionUrl = process.env.SLX_DATABASE_URL;
-const previewUrl = process.env.SLX_PREVIEW_DATABASE_URL;
-if (preview) {
-  if (!previewUrl || !productionUrl) {
-    throw new Error('Set SLX_PREVIEW_DATABASE_URL and the existing SLX_DATABASE_URL locally to check isolation.');
-  }
-  if (databaseTarget(previewUrl) === databaseTarget(productionUrl)) {
-    throw new Error('Preview must use a different PostgreSQL instance from production.');
-  }
-}
-const db = openPostgres(preview ? previewUrl : productionUrl);
-if (!db) throw new Error('Set SLX_DATABASE_URL before running setup.');
+const preview = ['migrate-preview','staff-preview'].includes(action);
+if (preview && !process.env.SLX_DATABASE_URL) throw new Error('Set the existing SLX_DATABASE_URL locally to check isolation.');
+const db = preview ? previewDatabase() : openPostgres();
+if (!db) throw new Error(`Set ${preview ? 'SLX_PREVIEW_DATABASE_URL' : 'SLX_DATABASE_URL'} before running setup.`);
 try {
-  if (action==='migrate' || preview) {
+  if (action==='staff-preview') {
+    await provisionPreviewStaff(db,id,email,process.env.SLX_PREVIEW_STAFF_PASSWORD);
+    console.log('SLX Preview staff account ready.');
+  } else if (action==='migrate' || preview) {
     await migrate(db);
     console.log(preview ? 'SLX Preview database schema ready.' : 'SLX private database schema ready.');
   } else if (action==='staff' && uuid(id) && ['owner','manager','operator'].includes(role)) {
@@ -51,5 +33,5 @@ try {
       await tx.query("INSERT INTO slx_audit(action,subject) VALUES ('staff.provision',$1)",[id]);
     });
     console.log('SLX staff account linked.');
-  } else throw new Error('Usage: setup.mjs migrate | migrate-preview | staff <Supabase UID> <email> <owner|manager|operator>');
+  } else throw new Error('Usage: setup.mjs migrate | migrate-preview | staff-preview <email> <owner|manager|operator> | staff <Supabase UID> <email> <owner|manager|operator>');
 } finally { await db.close(); }
