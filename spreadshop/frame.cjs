@@ -10,7 +10,7 @@ const provider = [
   'https://*.spreadshirt.net','https://*.spreadshirt.com','https://*.spreadshirt.co.uk','https://*.spreadshirtmedia.net',
 ].join(' ');
 
-function frameAssets(parentOrigin, preview) {
+function frameAssets(parentOrigin) {
   const policy = `default-src 'none'; script-src 'self' ${provider}; style-src 'self' 'unsafe-inline' ${provider}; img-src data: blob: ${provider}; font-src data: ${provider}; connect-src ${provider}; frame-src ${provider}; form-action ${provider}; base-uri 'none'`;
   return {
     policy:`${policy}; frame-ancestors ${parentOrigin}`,
@@ -18,14 +18,13 @@ function frameAssets(parentOrigin, preview) {
     <meta name="robots" content="noindex"><meta http-equiv="Content-Security-Policy" content="${policy}">
     <title>Каталог SLX · Spreadshop</title><link rel="stylesheet" href="/widget.css"><script defer src="/loader.js"></script></head>
     <body><main><div id="spreadshop-mount" data-shop-id="${shop.id}" data-shop-prefix="${shop.prefix}" data-shop-script="${shop.script}"
-      data-shop-locale="${shop.locale}" data-parent-origin="${parentOrigin}"><p id="spreadshop-message" role="status">Завантажуємо каталог Spreadshop…</p></div></main>
-    ${preview ? '<p class="widget-note">Локальне превʼю · Оформлення вимкнене</p>' : ''}</body></html>`,
+      data-shop-locale="${shop.locale}" data-parent-origin="${parentOrigin}"><p id="spreadshop-message">Завантажуємо каталог Spreadshop…</p></div></main></body></html>`,
   };
 }
 
 function startPreviewFrame(parentPort,port) {
   const parentOrigin = `http://127.0.0.1:${parentPort}`;
-  const {policy,html}=frameAssets(parentOrigin,true);
+  const {policy,html}=frameAssets(parentOrigin);
   return http.createServer((req,res) => {
     const files = {
       '/': ['text/html; charset=utf-8',html],
@@ -45,7 +44,7 @@ function buildFrame(env) {
   if (!launchApproved(env)) throw new Error('Spreadshop frame publication requires launch, payout and eligibility confirmation.');
   const parentOrigin='https://slxdivision.vercel.app';
   const output=path.join(__dirname,'frame-dist');
-  const {html}=frameAssets(parentOrigin,false);
+  const {html}=frameAssets(parentOrigin);
   mkdirSync(output,{recursive:true});
   writeFileSync(path.join(output,'index.html'),html);
   writeFileSync(path.join(output,'widget.css'),styles);

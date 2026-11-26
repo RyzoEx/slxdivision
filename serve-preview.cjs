@@ -32,7 +32,9 @@ function headersFor(pathname) {
   return headers;
 }
 
-if (spreadshopPreview) require('./spreadshop/frame.cjs').startPreviewFrame(port,4181);
+if (spreadshopPreview && process.env.SLX_SPREADSHOP_PREVIEW_CATALOG==='1') {
+  require('./spreadshop/frame.cjs').startPreviewFrame(port,4181);
+}
 
 http.createServer(async (request, response) => {
   let requestPath;

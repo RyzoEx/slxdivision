@@ -36,8 +36,9 @@ const origin = address?.origin ?? '';
 const spreadshopEnabled = spreadshopPreview || usesSpreadshop(process.env);
 const approved = vercelEnvironment==='production' && !preview && launchApproved(process.env);
 const spreadshop = spreadshopEnabled ? {
-  preview:spreadshopPreview, approved,
-  frame:spreadshopPreview ? 'http://localhost:4181/' : approved ? `${shop.frameOrigin}/` : null,
+  preview:spreadshopPreview,
+  frame:approved ? `${shop.frameOrigin}/`
+    : spreadshopPreview && process.env.SLX_SPREADSHOP_PREVIEW_CATALOG==='1' ? 'http://localhost:4181/' : null,
 } : null;
 const fulfillmentMeta = spreadshop ? '<meta name="slx-fulfillment" content="spreadshop">' : '';
 const writePage = (name, body) => writeFileSync(path.join(output, name), body);
