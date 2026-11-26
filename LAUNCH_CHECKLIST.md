@@ -9,9 +9,14 @@
 
 ## Notify Me
 
-- [x] Verify successful requests persist in PostgreSQL with consent and a policy version. Requests missing consent, spam-field submissions and failed writes cannot show success.
-- [ ] Before deploying the new form to production, run the additive database schema migration from `server/setup.mjs` against the approved target database. Verify Preview with a separate `SLX_PREVIEW_DATABASE_URL` if persistent test submissions are needed.
+- [x] Verify persistence, consent timestamp and policy version, rejection of missing consent and spam, and deduplication in local PostgreSQL integration tests.
+- [x] Prepare `migrate-preview` and verify that it refuses missing Preview credentials and a Preview connection that targets the production Supabase project.
+- [ ] Connect separate Supabase Free PostgreSQL to Vercel Preview. Supabase blocked project creation because both active Free slots were in use across the account’s organizations. Resume when an authorized owner confirms a free slot is available. The linked production project and unrelated projects stay in service.
+- [ ] Verify a real Notify Me submission and stored consent row on the isolated Vercel deployment. The public share link remains pinned to `de6602e`.
+- [ ] Before deploying the new form to production, run the additive database schema migration against the approved production database.
 - [ ] Verify delivery and unsubscribe on the approved sender before dispatching real notifications. Existing entries without a recorded opt-in remain stored and are excluded from product launch mail. Newsletter entries are stored separately from product requests. Newsletter broadcasting needs its own tested workflow.
+
+To resume Preview setup, keep the existing `SLX_DATABASE_URL` in the local ignored `.env.local` for the isolation check, add the isolated `SLX_PREVIEW_DATABASE_URL` with TLS hostname verification, and run `node --env-file=.env.local server/setup.mjs migrate-preview`. Configure the verified Preview pooler URL and its trusted CA under `SLX_PREVIEW_DATABASE_URL` and `SLX_DATABASE_CA_BASE64` in Vercel’s Preview environment for `codex/spreadshop` only. Deploy the branch preview. Submit with a controlled test address and explicit consent, then check `slx_private.slx_interests` for one matching row with `consent_at` and `consent_version`. Confirm a second submission leaves one row. Remove the test row after verification.
 
 ## Conditions for opening sales
 
