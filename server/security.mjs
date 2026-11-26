@@ -14,7 +14,10 @@ export function requireThat(condition, status, message) {
 }
 export function emailAddress(value) {
   const email = typeof value === 'string' ? value.trim().toLowerCase() : '';
-  requireThat(email.length <= 180 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email), 400, 'Вкажіть коректний email.');
+  const [local,domain] = email.split('@');
+  requireThat(email.length<=180 && local.length<=64 && /^[a-z0-9!#$%&'*+\/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+\/=?^_`{|}~-]+)*$/.test(local)
+    && /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/.test(domain ?? '')
+    && email === `${local}@${domain}`,400,'Вкажіть коректний email.');
   return email;
 }
 export function text(value, limit, required = false) {

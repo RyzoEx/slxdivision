@@ -19,6 +19,15 @@ export function launchMailReady(env) {
     && Boolean(env.SLX_EVENT_WEBHOOK?.startsWith('https://') || smtpHost(env));
 }
 
+const escape = value => value.replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+export function launchTemplate(event, productName) {
+  return `<div lang="uk" style="background:#0a0a0a;color:#f6f6f6;padding:28px;font:16px Arial,sans-serif">
+  <p style="color:#bbb;letter-spacing:.14em">SLX DIVISION</p><h1>${escape(productName)}</h1>
+  <p>Ви просили повідомити про початок продажів. Цей дизайн уже доступний.</p>
+  <p><a style="color:#f6f6f6" href="${escape(event.url)}">Переглянути дизайн</a></p>
+  <p><a style="color:#bbb" href="${escape(event.unsubscribe)}">Відписатися або видалити заявку</a></p></div>`;
+}
+
 export function launchMail(env, fetcher) {
   if (env.SLX_EVENT_WEBHOOK?.startsWith('https://')) {
     return async event => {
@@ -41,6 +50,7 @@ export function launchMail(env, fetcher) {
       to:{address:event.email},
       messageId:`<slx-${event.id}@${new URL(event.url).hostname}>`,
       subject:`SLX Division · ${productName} вже в продажу`,
+      html:launchTemplate(event,productName),
       text:[
         `Ви просили повідомити, коли ${productName} з’явиться у продажу.`,
         `Переглянути річ: ${event.url}`,

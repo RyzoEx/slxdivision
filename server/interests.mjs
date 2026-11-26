@@ -26,9 +26,10 @@ export async function interest(db, data, ip) {
       consent_at=EXCLUDED.consent_at,consent_version=EXCLUDED.consent_version`,[newId(),email,product,size,color,hashToken(token()),newId()]);
 }
 
-export async function unsubscribe(db, value) {
+export async function unsubscribe(db, value, erase = false) {
   requireThat(typeof value === 'string' && /^[A-Za-z0-9_-]{43}$/.test(value),400,'Некоректне посилання.');
-  await db.query("UPDATE slx_interests SET status='unsubscribed' WHERE unsubscribe_hash=$1",[hashToken(value)]);
+  await db.query(erase ? 'DELETE FROM slx_interests WHERE unsubscribe_hash=$1'
+    : "UPDATE slx_interests SET status='unsubscribed' WHERE unsubscribe_hash=$1",[hashToken(value)]);
 }
 
 export async function notifyLaunch(db, actor, product, env, origin, fetcher = fetch) {
@@ -44,7 +45,8 @@ export async function notifyLaunch(db, actor, product, env, origin, fetcher = fe
   await Promise.all(claims.map(async row => {
     const value = createHmac('sha256',env.SLX_UNSUBSCRIBE_SECRET).update(row.delivery_key).digest('base64url');
     try {
-      await db.query("UPDATE slx_interests SET unsubscribe_hash=$2 WHERE id=$1 AND status='sending'",[row.id,hashToken(value)]);
+      const claim = await db.query("UPDATE slx_interests SET unsubscribe_hash=$2 WHERE id=$1 AND status='sending' RETURNING id",[row.id,hashToken(value)]);
+      if (!claim.rows.length) return;
       await deliver({event:'product.available',id:row.delivery_key,email:row.email,product,size:row.size,color:row.color,
         url:`${origin}/product-${product}.html`,unsubscribe:`${origin}/account.html#unsubscribe=${value}`},item.name);
       await db.query("UPDATE slx_interests SET status='sent',sent_at=now() WHERE id=$1 AND status='sending'",[row.id]);

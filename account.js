@@ -53,16 +53,19 @@
       if (unsubscribe) {
         const notice = state('Working…');
         const button = element('button',{className:'primary',type:'button'},'Unsubscribe');
-        notice.textContent = 'Confirm you want to unsubscribe.';
-        root.replaceChildren(notice,button);
-        button.addEventListener('click',async()=>{
-          button.disabled = true;
+        const erase = element('button',{className:'secondary',type:'button'},'Delete my signup');
+        notice.textContent = 'You can unsubscribe or delete this signup and its consent record.';
+        root.replaceChildren(notice,button,erase);
+        async function update(shouldErase) {
+          button.disabled = erase.disabled = true;
           try {
-            await api('unsubscribe',{body:{token:unsubscribe}});
+            await api('unsubscribe',{body:{token:unsubscribe,erase:shouldErase}});
             history.replaceState(null,'',location.pathname);
-            root.replaceChildren(state('You have unsubscribed from this update.'));
-          } catch (error) { notice.textContent = error.message; button.disabled = false; }
-        });
+            root.replaceChildren(state(shouldErase ? 'If this link matched a signup, it has been deleted.' : 'If this link matched a signup, it has been unsubscribed.'));
+          } catch (error) { notice.textContent = error.message; button.disabled = erase.disabled = false; }
+        }
+        button.addEventListener('click',()=>update(false));
+        erase.addEventListener('click',()=>update(true));
         return;
       }
       const {user,orders,authReady} = await api('account');
