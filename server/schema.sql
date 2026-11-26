@@ -37,6 +37,10 @@ CREATE TABLE IF NOT EXISTS slx_products (
 CREATE TABLE IF NOT EXISTS slx_collections (
   id text PRIMARY KEY, data jsonb NOT NULL
 );
+CREATE TABLE IF NOT EXISTS slx_store_content (
+  id integer PRIMARY KEY CHECK (id=1), data jsonb NOT NULL
+);
+ALTER TABLE slx_store_content ENABLE ROW LEVEL SECURITY;
 CREATE TABLE IF NOT EXISTS slx_manufacturers (
   id uuid PRIMARY KEY, data jsonb NOT NULL
 );

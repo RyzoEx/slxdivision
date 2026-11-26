@@ -1,0 +1,23 @@
+# SLX Division backend preview
+
+`codex/backend-infrastructure` uses a standalone Neon Free database for Vercel Preview. Production continues to use its current PostgreSQL, Supabase Auth and Storage. The preview uses independent staff credentials and accepts only reserved `.test` signup addresses. Preview supports collection and social edits and subscriber removal within its own database. These settings never affect `main`.
+
+## Provisioning after approval
+
+1. Confirm that the enrollment terms shown by Neon allow the account holder to register and administer the project. Use the free plan without attaching a card. Its documented limits include 1 GB of storage and 100 compute-unit hours per project, with compute suspended at the monthly cap. [Neon pricing](https://neon.com/pricing) · [Neon service schedule](https://neon.com/platform-terms)
+2. Create a dedicated empty Neon project. Copy its direct connection string to the ignored `.env.local` as `SLX_PREVIEW_DATABASE_URL`. Keep the existing `SLX_DATABASE_URL` in that local file for the migration's isolation check. The preview adapter uses system trust roots and hostname verification. It ignores any production CA setting.
+3. Run `node --env-file=.env.local server/setup.mjs migrate-preview`. To create a staff account, put a unique 20–128 character password into the ignored file as `SLX_PREVIEW_STAFF_PASSWORD`, then run `node --env-file=.env.local server/setup.mjs staff-preview <team-identifier@example.test> <owner|manager|operator>`. Remove the plaintext from the ignored file after provisioning. Use a different password per account. Re-running provisioning rotates the password and invalidates existing sessions.
+4. In Vercel set `SLX_PREVIEW_DATABASE_URL` to the pooled Neon URL for **Preview**, scoped to `codex/backend-infrastructure`. Keep deployment protection on. Deploy and check `/admin` → Система. Then add `SLX_PREVIEW_SIGNUP=1` for the same branch and redeploy. [Neon and Vercel](https://neon.com/docs/guides/vercel-overview)
+5. In Preview, submit a `.test` address twice with consent, verify a single record, then test filtering, CSV download, and deletion. The collection status in the dashboard is editorial and cannot enable checkout. Design visibility controls affect listings and search. Existing direct product links and their static metadata remain accessible.
+
+## Email and analytics
+
+- Dispatch remains behind the existing production sales checks and sender configuration. The SMTP template includes an unsubscribe and delete link. Never dispatch a live list during Preview. Local tests use an intercepted transport. Resend Free currently lists 100 transactional messages a day, requires an eligible adult account, and needs a verified sender domain to send to external recipients. No Resend account is required for local tests. [Resend pricing](https://resend.com/pricing) · [Resend terms](https://resend.com/legal/terms-of-service) · [Domain verification](https://resend.com/docs/dashboard/domains/introduction)
+- The existing SMTP adapter can use a configured brand mailbox. Before any real send, verify its terms and delivery limits, and test with a controlled address. For requests before a launch email exists, confirm the email owner's request through the brand contact channel before a manager removes the subscriber. Removing a signup deletes the database record. The audit retains only the action and staff identity.
+- `SLX_GA_DEBUG=1` is local only. `page_view` is explicit and carries `debug_mode` like the other events. Keep `SLX_GA_STREAM_READY` unset in production. The E2E test intercepts the Google tag and validates the data layer. A 204 collection response alone does not confirm visibility in the property’s DebugView. Verify DebugView independently before release. [Google DebugView](https://support.google.com/analytics/answer/7201382)
+
+## Repeatable checks
+
+- `npm test` runs connection isolation, validation, API role checks and PostgreSQL-compatible integration tests with PGlite.
+- `npm run test:e2e` runs Chromium against a local database and uses only `.test` records. It defaults to Microsoft Edge. Set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` for another Chromium executable. Set `SLX_TEST_SCREENSHOTS` to an output directory for desktop and mobile screenshots.
+- To disable a hosted test, remove `SLX_PREVIEW_SIGNUP` and redeploy the branch. Removing the branch-scoped connection variable makes the preview database unavailable without writing to production.

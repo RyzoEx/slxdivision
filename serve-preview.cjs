@@ -12,11 +12,12 @@ if (!spreadshopPreview && existsSync(localEnv)) process.loadEnvFile(localEnv);
 
 const output = path.join(__dirname, spreadshopPreview ? '.spreadshop-preview' : 'dist');
 const port = Number(process.env.PORT || (spreadshopPreview ? 4180 : 4173));
-const api = Promise.all([import('./server/commerce.mjs'),import('./server/db.mjs'),import('./server/supabase.mjs')])
-  .then(([{commerce},{openPostgres},{supabase}])=>commerce({
-    db:openPostgres(spreadshopPreview ? null : process.env.SLX_PREVIEW_DATABASE_URL || null),auth:supabase(),
-    env:{...process.env,VERCEL_ENV:'development',...(spreadshopPreview ? {SLX_FULFILLMENT:'spreadshop'} : {})},local:true,
-  }));
+const api = Promise.all([import('./server/commerce.mjs'),import('./server/db.mjs'),import('./server/preview-auth.mjs')])
+  .then(([{commerce},{previewDatabase},{previewAuth}])=>{
+    const db = spreadshopPreview ? null : previewDatabase();
+    return commerce({db,auth:previewAuth(db),local:true,env:{...process.env,VERCEL_ENV:'preview',
+      ...(spreadshopPreview ? {SLX_FULFILLMENT:'spreadshop'} : {})}});
+  });
 const types = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8', '.webp': 'image/webp', '.jpg': 'image/jpeg',

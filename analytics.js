@@ -44,10 +44,12 @@
     gtag('js',new Date());
     gtag('config',id,{
       ...locationParams,
+      send_page_view:false,
       allow_google_signals:false,allow_ad_personalization_signals:false,
       cookie_domain:'none',cookie_expires:7776000,cookie_update:false,
       ...(debug ? {debug_mode:true} : {}),
     });
+    send('page_view',locationParams);
     const item = document.querySelector('[data-product-page]');
     if (item) send('view_item',{items:[{item_id:item.dataset.productPage,item_name:document.querySelector('main h1').textContent}]});
     const collection = document.querySelector('[data-collection-event]');

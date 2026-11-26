@@ -56,6 +56,16 @@
 .finance-grid dt, .ops-timeline { color:var(--muted); font-size:.85rem; }
 .finance-grid dd { margin:2px 0 0; font-weight:800; }
 .ops-timeline { margin-top:13px !important; }
+.ops-metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr)); border-block:1px solid var(--line); margin:0 0 10px; }
+.ops-metrics div { padding:16px 10px; }
+.ops-metrics dt, .ops-data-row time, .ops-subscriber time { color:var(--muted); font:.78rem/1.5 'IBM Plex Mono',monospace; }
+.ops-metrics dd { margin:.25rem 0 0; font-size:2.2rem; font-weight:800; }
+.ops-data-row { display:flex; justify-content:space-between; flex-wrap:wrap; gap:.35rem 1rem; }
+.ops-subscriber-list { list-style:none; padding:0; margin:0; }
+.ops-subscriber { display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr); gap:12px; padding:12px 4px; border-bottom:1px solid var(--line); overflow-wrap:anywhere; }
+.ops-subscriber p { margin:.25rem 0 0; }
+.ops-delete summary { cursor:pointer; text-decoration:underline; }
+@media(max-width:540px) { .ops-subscriber { grid-template-columns:1fr; gap:4px; } }
 .spreadshop-panel { margin-bottom:28px; padding:clamp(17px,3vw,34px); border:1px solid var(--line); background:#101010; }
 .spreadshop-intro { display:flex; flex-wrap:wrap; align-items:end; justify-content:space-between; gap:12px 22px; margin-bottom:18px; }
 .spreadshop-intro h2 { font-size:clamp(1.5rem,4vw,2.6rem); letter-spacing:-.06em; }

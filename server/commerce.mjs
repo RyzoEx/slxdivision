@@ -1,6 +1,6 @@
 import { adminPage } from './admin-shell.mjs';
 import { changeRole, login, logout, requestOtp, verifyOtp } from './auth.mjs';
-import { audit, catalog, changeOrder, collectionsSource, createOrder, listOrders, productsSource, readyForSale,
+import { audit, catalog, changeOrder, createOrder, listOrders, readyForSale,
   launchChecks, manualPrepaymentAllowed, referrals, setManufacturer, setPricing, setProduct, setReferral, settings, statuses, updateSettings, uuid } from './orders.mjs';
 import { csv, report } from './finance.mjs';
 import { manufacturers } from './pricing.mjs';
@@ -10,7 +10,8 @@ import { interest, notifyLaunch, unsubscribe } from './interests.mjs';
 import { launchMailReady } from './launch-mail.mjs';
 import spreadshop from '../spreadshop/config.cjs';
 import { recordSpreadshopEntry, spreadshopCsv, spreadshopReport } from './spreadshop-finance.mjs';
-import { currentUser, Failure, isAdmin, newId, readJson, requireThat, text, throttle } from './security.mjs';
+import { currentUser, Failure, isAdmin, newId, readJson, requireThat, throttle } from './security.mjs';
+import { collectionSettings, updateCollection, socialSettings, updateSocial, subscribers, deleteSubscriber, subscriberSummary } from './store-management.mjs';
 
 const baseHeaders = { 'Cache-Control':'no-store','X-Robots-Tag':'noindex','X-Content-Type-Options':'nosniff' };
 function json(data, status = 200, headers = {}) {
@@ -33,7 +34,7 @@ function adminMetadata(user, config, items, env, auth) {
     user, statuses, sales:config.sales && readyForSale(config,items,env), modeReady:readyForSale(config,items,env),
     storageReady:auth.storageReady, canNotify:launchMailReady(env),
     fulfillment:spreadshop.usesSpreadshop(env) ? 'spreadshop' : 'direct',
-    telegramReady:telegramReady(env),
+    telegramReady:telegramReady(env),preview:env.VERCEL_ENV==='preview',
   };
 }
 
@@ -54,6 +55,10 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       }
       requireThat(db,503,'База даних SLX ще не налаштована.');
       const user = await currentUser(db,request,secure);
+      if (op==='store-content' && get) {
+        const [collections,social] = await Promise.all([collectionSettings(db),socialSettings(db)]);
+        return json({social,collections:collections.map(({id,name,description,hidden})=>({id,name,description,hidden}))});
+      }
       if (op === 'admin-page' && get) {
         return new Response(adminPage(isAdmin(user)),{
           status:user && !isAdmin(user) ? 403 : 200,
@@ -73,6 +78,7 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       if (op === 'media' && get) {
         const key = url.searchParams.get('key');
         requireThat(imageKey.test(key ?? '') && (await catalog(db)).some(item=>item.photo===key),404,'Зображення не знайдено.');
+        requireThat(auth.storageReady,503,'Медіасховище ще не налаштовано.');
         const file = await auth.download(key);
         requireThat(file.ok,404,'Зображення не знайдено.');
         return new Response(file.body,{headers:{'Content-Type':fileTypes[key.split('.').at(-1)].mime,'Cache-Control':'public, max-age=300','X-Content-Type-Options':'nosniff'}});
@@ -94,8 +100,8 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
         requireThat(mode==='test' || mode==='live',400,'Некоректний режим.');
       }
       if (op === 'admin-summary' && get) {
-        const [config,items,{rows}] = await Promise.all([settings(db),catalog(db),db.query('SELECT status,COUNT(*)::int AS count FROM slx_orders WHERE mode=$1 GROUP BY status',[mode])]);
-        return json({...adminMetadata(user,config,items,env,auth),counts:rows,products:items.length});
+        const [config,items,{rows},signups] = await Promise.all([settings(db),catalog(db),db.query('SELECT status,COUNT(*)::int AS count FROM slx_orders WHERE mode=$1 GROUP BY status',[mode]),manager(user) ? subscriberSummary(db) : null]);
+        return json({...adminMetadata(user,config,items,env,auth),counts:rows,products:items.length,signups});
       }
       if (op === 'admin-products' && get) {
         requireThat(manager(user),403,'Недостатньо прав.');
@@ -113,10 +119,23 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       }
       if (op === 'admin-collections' && get) {
         requireThat(manager(user),403,'Недостатньо прав.');
-        const {rows} = await db.query('SELECT id,data FROM slx_collections');
-        const notes = new Map(rows.map(row => [row.id,row.data.notes]));
-        return json({collections:collectionsSource.map(({id,name,archived})=>({id,name,archived,notes:notes.get(id) ?? '',
-          count:productsSource.filter(item=>item.collection===id).length}))});
+        return json({collections:await collectionSettings(db)});
+      }
+      if (['admin-subscribers','admin-subscribers-csv','admin-social','admin-system'].includes(op) && get) {
+        requireThat(manager(user),403,'Недостатньо прав.');
+        if (op==='admin-social') return json({social:await socialSettings(db)});
+        if (op==='admin-system') {
+          const started=performance.now();
+          await db.query('SELECT 1 FROM slx_interests LIMIT 1');
+          return json({database:'connected',latencyMs:Math.round(performance.now()-started),
+            environment:env.VERCEL_ENV ?? 'local',spreadshop:env.VERCEL_ENV==='production' && spreadshop.launchApproved(env),
+            analytics:env.VERCEL_ENV==='production' && env.SLX_GA_STREAM_READY==='1',
+            previewSignup:env.VERCEL_ENV==='preview' && env.SLX_PREVIEW_SIGNUP==='1'});
+        }
+        const csvExport=op==='admin-subscribers-csv';
+        const result=await subscribers(db,url.searchParams,csvExport);
+        return csvExport ? new Response(result,{headers:{...baseHeaders,'Content-Type':'text/csv; charset=utf-8',
+          'Content-Disposition':'attachment; filename=slx-subscribers.csv'}}) : json(result);
       }
       if (['admin-orders','admin-manufacturing'].includes(op) && get) {
         const items=mode==='test' && manager(user) || mode==='live' && env.SLX_ALLOW_MANUAL_PREPAYMENT==='1' ? await catalog(db) : [];
@@ -164,8 +183,14 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       if (op==='otp') { await requestOtp(db,auth,data,ip); return json({ok:true}); }
       if (op==='verify') return json({ok:true},200,{'Set-Cookie':await verifyOtp(db,auth,data,ip,secure)});
       if (op==='logout') return json({ok:true},200,{'Set-Cookie':await logout(db,request,secure)});
-      if (op==='interest') { await interest(db,data,ip); return json({ok:true},201); }
-      if (op==='unsubscribe') { await unsubscribe(db,data.token); return json({ok:true}); }
+      if (op==='interest') {
+        requireThat(env.VERCEL_ENV !== 'production' || env.SLX_LAUNCH_SIGNUP_READY==='1',503,'Підписка ще недоступна.');
+        requireThat(env.VERCEL_ENV !== 'preview' || env.SLX_PREVIEW_SIGNUP === '1',503,'Тестова підписка ще недоступна.');
+        requireThat(env.VERCEL_ENV !== 'preview' || (typeof data.email==='string' && /\.test$/i.test(data.email.trim())),400,'У Preview використовуйте тестові адреси .test.');
+        await interest(db,data,ip);
+        return json({ok:true},201);
+      }
+      if (op==='unsubscribe') { await unsubscribe(db,data.token,data.erase===true); return json({ok:true}); }
       if (op==='order') {
         requireThat(!spreadshop.usesSpreadshop(env),409,'Оформлення товарів доступне через Spreadshop.');
         requireThat(user?.role==='customer',401,'Підтвердьте вхід у кабінет покупця.');
@@ -216,12 +241,16 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
         return json(await setProduct(db,user,data,env));
       }
       if (op==='admin-collection') {
-        requireThat(manager(user) && mode==='live',403,'Колекції редагуються лише в робочому режимі.');
-        requireThat(collectionsSource.some(item=>item.id===data.id),404,'Колекцію не знайдено.');
-        const notes = text(data.notes,1000);
-        await db.query('INSERT INTO slx_collections VALUES ($1,$2::jsonb) ON CONFLICT(id) DO UPDATE SET data=EXCLUDED.data',[data.id,JSON.stringify({notes})]);
-        await audit(db,user,'collection.update',data.id);
-        return json({notes});
+        requireThat(manager(user) && (mode==='live' || env.VERCEL_ENV==='preview'),403,'Колекції редагуються лише в робочому режимі.');
+        return json(await updateCollection(db,user,data));
+      }
+      if (op==='admin-social') {
+        requireThat(manager(user) && (mode==='live' || env.VERCEL_ENV==='preview'),403,'Недостатньо прав.');
+        return json({social:await updateSocial(db,user,data)});
+      }
+      if (op==='admin-subscriber-delete') {
+        requireThat(manager(user) && (mode==='live' || env.VERCEL_ENV==='preview'),403,'Недостатньо прав.');
+        return json(await deleteSubscriber(db,user,data.id));
       }
       if (op==='admin-referral') {
         requireThat(manager(user),403,'Недостатньо прав.');
@@ -252,6 +281,7 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
     } catch (error) {
       if (error instanceof Failure) return json({error:error.message},error.status);
       console.error('SLX commerce:',error.code ?? error.name);
+      if (op==='interest') return json({error:'Підписку не збережено. Спробуйте пізніше.'},503);
       return json({error:'Тимчасово недоступно. Повторіть пізніше.'},['42P01','3F000','ECONNREFUSED'].includes(error.code) ? 503 : 500);
     }
   };

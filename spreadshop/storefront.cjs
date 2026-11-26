@@ -1,6 +1,6 @@
 const { shop } = require('./config.cjs');
 const { escape } = require('../site-shell.cjs');
-const { launchSignup } = require('../content/storefront.json');
+const launchSignup = require('../signup-config.cjs');
 
 function storefront({preview=false,frame=null}) {
   const sandbox = preview ? 'allow-scripts allow-same-origin'

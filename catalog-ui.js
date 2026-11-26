@@ -69,11 +69,13 @@
         });
       }
       for (const card of ordered) {
+        if (!card.isConnected) continue;
         card.hidden = Boolean(filter.value && filter.value !== card.dataset.category);
         grid.append(card);
       }
-      section.querySelector('[data-filter-empty]').hidden = cards.some(card => !card.hidden);
+      section.querySelector('[data-filter-empty]').hidden = cards.some(card => card.isConnected && !card.hidden);
     }
+    section.addEventListener('slx:catalog-visibility', update);
     for (const control of [filter, sort]) control.addEventListener('change', update);
   }
 

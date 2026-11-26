@@ -6,12 +6,41 @@
   document.body.append(dialog);
   const content = dialog.querySelector('.drawer-body');
   const {api,element,money,cart:cartStore,favorites:favoriteStore,catalog} = window.slx;
-  const products = window.SLX_CATALOG ?? [];
+  let products = window.SLX_CATALOG ?? [];
   const spreadshop = document.querySelector('meta[name="slx-fulfillment"]')?.content === 'spreadshop';
   const productById = new Map(products.map(item => [item.id, item]));
   let source;
   let cartRender = 0;
   let checkoutIntent;
+
+  api('store-content').then(({social,collections})=>{
+    const hidden = new Set(collections.flatMap(collection=>collection.hidden));
+    products = products.filter(item=>!hidden.has(item.id));
+    for (const entry of document.querySelectorAll('[data-design-listing]')) {
+      if (hidden.has(entry.dataset.designListing)) entry.remove();
+    }
+    for (const grid of document.querySelectorAll('.inventory')) grid.dispatchEvent(new Event('slx:catalog-visibility'));
+    for (const collection of collections) {
+      for (const card of document.querySelectorAll('[data-collection-card]')) {
+        if (card.dataset.collectionCard !== collection.id) continue;
+        card.querySelector('h2').textContent = collection.name;
+        card.querySelector('[data-collection-description]').textContent = collection.description;
+      }
+      if (document.querySelector('[data-collection-page]')?.dataset.collectionEvent === collection.id) {
+        document.querySelector('main h1').textContent = collection.name;
+        document.querySelector('[data-collection-description]').textContent = collection.description;
+      }
+    }
+    for (const group of document.querySelectorAll('[data-social-links]')) {
+      const links = Object.entries(social).filter(([,url])=>url).map(([name,href])=>{
+        const link = element('a',{href,rel:'noopener noreferrer'},name);
+        link.dataset.socialPlatform = name.toLowerCase();
+        return link;
+      });
+      for (const link of group.querySelectorAll('[data-social-platform]')) link.remove();
+      group.prepend(...links);
+    }
+  }).catch(()=>{});
 
   function open(kind, title, trigger) {
     source = trigger;
@@ -241,7 +270,8 @@
       selection.textContent = [item.name, size, color].filter(Boolean).join(' · ');
       form.before(selection);
     }
-    panel.querySelector('.interest-note').textContent = item
+    panel.querySelector('.interest-note').textContent = document.querySelector('meta[name="slx-test-signup"]')
+      ? 'Preview only. Use a test address ending in .test. No email will be sent.' : item
       ? 'We will email you about this item.'
       : 'We will email you SLX updates.';
     form.addEventListener('submit', async event => {

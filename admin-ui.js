@@ -24,7 +24,8 @@
   };
   const roles = {owner:'Власник',manager:'Менеджер',operator:'Оператор'};
   const tabs = {
-    dashboard:['Огляд','admin-summary'],products:['Товари','admin-products'],collections:['Колекції','admin-collections'],
+    dashboard:['Огляд','admin-summary'],subscribers:['Підписники','admin-subscribers'],collections:['Колекції','admin-collections'],
+    social:['Соцмережі','admin-social'],system:['Система','admin-system'],products:['Товари','admin-products'],
     orders:['Замовлення','admin-orders'],customers:['Клієнти','admin-customers'],manufacturing:['Виробництво','admin-manufacturing'],
     partners:['Виробники','admin-manufacturers'],finance:['Фінанси','admin-finance'],
     referrals:['SLX Circle','admin-referrals'],settings:['Налаштування','admin-settings'],
@@ -32,6 +33,8 @@
   let me;
   let tab = 'dashboard';
   let mode = 'test';
+  let preview = false;
+  let subscriberFilters = {};
   let loadNumber = 0;
   const unauthorized = error => { if (error.status===401) location.reload(); else message.textContent = error.message; };
   const read = (op,params={}) => api(op,{params:{mode,...params}});
@@ -81,11 +84,55 @@
     return node;
   }
   function dashboard(data) {
-    return [note(data.fulfillment==='spreadshop' ? 'Spreadshop · Оформлення замовлень і оплату веде партнер.'
-      : data.sales ? 'LIVE · Приймаємо заявки без списання коштів.' : 'PRE-LAUNCH · Прийом робочих заявок вимкнено.'),
+    const signups = data.signups;
+    const eventNames = {'admin.login':'Вхід до панелі','collection.update':'Оновлено колекцію','social.update':'Оновлено соцмережі',
+      'interest.delete':'Видалено заявку','interest.dispatch':'Запущено надсилання'};
+    return [note(data.sales ? 'LIVE · Приймаємо заявки без списання коштів.' : 'COMING SOON · Продажі вимкнено.'),
+      ...(signups ? [h('dl',{className:'ops-metrics'},
+        h('div',{},h('dt',{},'Підписники новин'),h('dd',{},signups.subscribers)),
+        h('div',{},h('dt',{},'Запити на сповіщення'),h('dd',{},signups.requests)),
+        h('div',{},h('dt',{},'Товари'),h('dd',{},data.products))),
+        card(heading('Попит за дизайнами'),...(signups.designs.length ? signups.designs.map(row=>h('p',{className:'ops-data-row'},row.name,h('strong',{},row.count))) : [note('Підтверджених заявок поки немає.')])),
+        card(heading('Останні події'),...(signups.activity.length ? signups.activity.map(row=>h('p',{className:'ops-data-row'},eventNames[row.action],h('time',{},ds(row.created_at)))) : [note('Подій поки немає.')]))] : []),
       note(data.telegramReady ? 'Telegram підключено.' : 'Telegram очікує налаштування.'),
-      card(heading('Каталог'),h('p',{},`Речей: ${data.products}`)),
       card(heading('Замовлення'),...(data.counts.length ? data.counts.map(row=>h('p',{},`${orderStatus[row.status]} · ${row.count}`)) : [note('Ще немає замовлень.')]))];
+  }
+  function subscribers(data) {
+    const consent = [['all','Усі'],['active','Згода є'],['withdrawn','Згоду відкликано'],['legacy','Згода не зафіксована']];
+    const scopes = [['all','Усі'],['newsletter','Новини SLX'],['product','Сповіщення про товар']];
+    const filters = form([field('Пошук за email','q',subscriberFilters.q,{type:'search',maxLength:180}),
+      choose('Тип','scope',scopes,subscriberFilters.scope),choose('Згода','consent',consent,subscriberFilters.consent)],
+      h('button',{type:'submit',className:'primary'},'Фільтрувати'),values=>{subscriberFilters=values;},{feedback:''});
+    const results = data.subscribers.map(row=>{
+      const canDelete = preview || mode==='live';
+      const permission = row.status==='unsubscribed' ? consent[2][1] : row.consent_at ? consent[1][1] : consent[3][1];
+      const deletion = h('details',{className:'ops-delete'},h('summary',{},'Видалити…'),
+        note('Заявку і запис згоди буде видалено.'),action('Підтвердити видалення',async()=>{
+          await post('admin-subscriber-delete',{id:row.id});
+          if (data.subscribers.length===1 && data.page>1) subscriberFilters.page=data.page-1;
+          await render();
+        }));
+      return h('li',{className:'ops-subscriber'},h('div',{},h('strong',{},row.email),note(row.product==='newsletter'?'Новини SLX':row.product)),
+        h('div',{},h('time',{},ds(row.created_at)),note(permission)),canDelete ? deletion : null);
+    });
+    const go = page=>{subscriberFilters={...subscriberFilters,page};return render();};
+    return [filters,h('a',{className:'secondary',href:endpoint('admin-subscribers-csv',{...subscriberFilters,mode}),download:'slx-subscribers.csv'},'Експортувати CSV'),
+      results.length ? h('ul',{className:'ops-subscriber-list'},results) : note('Записів за цими фільтрами немає.'),
+      h('div',{className:'ops-data-row'},data.page>1 ? action('Попередня',()=>go(data.page-1)) : null,
+        note(`Сторінка ${data.page}`),data.more ? action('Наступна',()=>go(data.page+1)) : null)];
+  }
+  function social(data) {
+    const fields=Object.entries(data.social).map(([name,url])=>field(name,name,url,{type:'url',maxLength:280}));
+    return [note('Введіть HTTPS-посилання на офіційні профілі. Порожнє поле приховує посилання.'),
+      preview || mode==='live' ? form(fields,summary(),values=>post('admin-social',values))
+        : card(...Object.entries(data.social).map(([name,url])=>h('p',{},`${name} · ${url || '—'}`)))];
+  }
+  function system(data) {
+    return [card(heading('Стан сервісів'),
+      ...[['База даних',`${data.database==='connected'?'Підключено':'Недоступна'} · ${data.latencyMs} мс`],
+        ['Середовище',data.environment],['Віджет Spreadshop',data.spreadshop?'Увімкнено':'Вимкнено'],
+        ['Аналітика',data.analytics?'Увімкнено':'Вимкнено'],['Тестова форма',data.previewSignup?'Увімкнено':'Вимкнено']]
+        .map(([label,value])=>h('p',{className:'ops-data-row'},label,h('strong',{},value))),action('Перевірити з’єднання',render))];
   }
   async function upload(file) {
     if (file.size > 1400000) throw new Error('Зображення має бути до 1,4 МБ.');
@@ -174,10 +221,15 @@
       ...data.manufacturers.map(partner=>h('details',{className:'ops-card'},h('summary',{},partner.name),editor(partner)))];
   }
   function collections(data) {
-    return [note('Склад колекцій і публічні матеріали керуються у Git.'),
-      ...data.collections.map(item=>card(heading(item.name),note(`Речей у каталозі: ${item.count}${item.archived?' · архів':''}`),
-        mode==='live' ? form([field('Внутрішня примітка','notes',item.notes,{maxLength:1000})],summary(),values=>post('admin-collection',{id:item.id,notes:values.notes}))
-          : note(item.notes || 'Приміток немає.')))];
+    return [note('Статус колекції в панелі фіксує готовність. Продажі керуються окремим чеклістом запуску.'),
+      ...data.collections.map(item=>card(heading(item.name),note(`Дизайнів: ${item.count} · ${item.release==='live'?'Live':'Coming Soon'}`),
+        preview || mode==='live' ? form([field('Назва','name',item.name,{maxLength:100,required:true}),
+          h('label',{},'Опис для сторінки колекції',h('textarea',{name:'description',value:item.description,maxLength:1000})),
+          choose('Статус колекції','release',[['coming-soon','Coming Soon'],['live','Live']],item.release),
+          field('Внутрішня примітка','notes',item.notes,{maxLength:1000}),
+          ...item.designs.map(design=>checkbox(`Показувати ${design.name}`,design.id,!item.hidden.includes(design.id)))],
+        summary(),({name,description,release,notes,...visible})=>post('admin-collection',{id:item.id,name,description,release,notes,
+          hidden:item.designs.filter(design=>visible[design.id]!=='on').map(design=>design.id)})) : note(item.notes || 'Приміток немає.')))];
   }
   function testOrder(products) {
     const rows = h('div',{className:'test-order-rows'});
@@ -378,7 +430,7 @@
         summary(),values=>post('admin-staff',{id:staff.id,role:values.role,active:values.active==='on'})))));
     return output;
   }
-  const views = {dashboard,products,collections,orders,customers,manufacturing:data=>orders(data,true),partners,finance,referrals:circles,settings:configuration};
+  const views = {dashboard,subscribers,social,system,products,collections,orders,customers,manufacturing:data=>orders(data,true),partners,finance,referrals:circles,settings:configuration};
   function navigation() {
     const role = me.role;
     const list = Object.keys(tabs).filter(id=>role==='owner' || (role==='manager' ? id!=='settings' : ['dashboard','orders','manufacturing'].includes(id)));
@@ -397,12 +449,15 @@
     if (me) navigation();
     panel.replaceChildren(note('Завантажуємо…'));
     try {
+      let summaryData;
       if (!me) {
-        const summary = await read('admin-summary');
-        me = summary.user;
+        summaryData = await read('admin-summary');
+        me = summaryData.user;
+        preview = summaryData.preview;
         navigation();
       }
-      const data = tab==='finance' ? null : await read(tabs[tab][1]);
+      const data = tab==='finance' ? null : tab==='dashboard' && summaryData ? summaryData
+        : await read(tabs[tab][1],tab==='subscribers' ? subscriberFilters : undefined);
       if (version===loadNumber) panel.replaceChildren(heading(tabs[tab][0]),...views[tab](data));
     } catch (error) { if (version===loadNumber) { panel.replaceChildren(); unauthorized(error); } }
   }

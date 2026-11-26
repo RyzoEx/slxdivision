@@ -1,5 +1,5 @@
 const { escape } = require('./site-shell.cjs');
-const { launchSignup } = require('./content/storefront.json');
+const launchSignup = require('./signup-config.cjs');
 
 const status = {
   'coming-soon': 'Coming soon',
@@ -24,7 +24,7 @@ function grid(items, { tools = false, archived = false } = {}) {
       <label>Sort <select data-sort><option value="">Catalog order</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option></select></label>
     </div><p class="muted inventory-empty" data-filter-empty hidden>No items in this category.</p>` : ''}
     <div class="inventory-grid" data-inventory-grid>${items.map(item => `
-      <article class="inventory-card" ${archived ? '' : `data-catalog-item="${item.id}"`} data-category="${escape(item.category)}">
+      <article class="inventory-card" data-design-listing="${item.id}" ${archived ? '' : `data-catalog-item="${item.id}"`} data-category="${escape(item.category)}">
         <a href="${productUrl(item)}">
           ${item.photos.length ? `<div class="inventory-photo${item.photos[0].kind === 'artwork' ? ' inventory-artwork' : ''}">${photo(item.photos[0])}${photo(item.photos[1])}</div>` : ''}
           <div class="inventory-card-title"><h2>${escape(item.name)}</h2><span data-stock>${archived ? 'Archive' : status[item.status === 'available' ? 'coming-soon' : item.status]}</span></div>
@@ -39,10 +39,10 @@ function collectionsPage(collections, products) {
   if (!collections.length) return empty;
   return `<section class="shell inventory"><div class="inventory-grid">${collections.map(collection => {
     const cover = collection.cover ?? products.find(item => item.collection === collection.id)?.photos[0];
-    return `<article class="inventory-card"><a href="${collectionUrl(collection)}">
+    return `<article class="inventory-card" data-collection-card="${collection.id}"><a href="${collectionUrl(collection)}">
       ${cover ? `<div class="inventory-photo">${photo(cover)}</div>` : ''}
       <div class="inventory-card-title"><h2>${escape(collection.name)}</h2></div>
-      ${collection.description ? `<p>${escape(collection.description)}</p>` : ''}
+      <p data-collection-description>${escape(collection.description ?? '')}</p>
     </a></article>`;
   }).join('')}</div></section>`;
 }
@@ -110,7 +110,7 @@ function inventoryPages({ collections, products }, {spreadshop} = {}) {
       image: cover,
       searchImages: [...(collection.cover ? [collection.cover] : []), ...entries.flatMap(item => item.photos.slice(0,2))],
       trail: collectionTrail(collection),
-      content: `<div data-collection-event="${collection.id}"></div>${collection.description ? `<p class="shell collection-description">${escape(collection.description)}</p>` : ''}
+      content: `<div data-collection-event="${collection.id}" data-collection-page></div><p class="shell collection-description" data-collection-description>${escape(collection.description ?? '')}</p>
         ${collection.cover ? `<div class="shell collection-cover">${photo(collection.cover, 'eager')}</div>` : ''}
         ${grid(entries, { tools: true, archived: collection.archived })}`,
     };

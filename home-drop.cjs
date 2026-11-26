@@ -25,7 +25,7 @@ module.exports = ({catalog,settings,teaser,teaserPoster}) => {
       const art=item.artwork;
       const thumbnail=item.photos[0] ?? art;
       const name=artworkNames.get(item.id);
-      return `<article class="drop-art">
+      return `<article class="drop-art" data-design-listing="${item.id}">
         <a class="drop-art-link" href="/${escape(art.src)}" data-artwork="${escape(item.id)}" data-artwork-name="${escape(name)}" aria-label="Enlarge ${escape(name)} artwork">
           <div class="drop-art-image"><img src="/${escape(thumbnail.src)}" width="${thumbnail.width}" height="${thumbnail.height}" alt="${escape(art.alt)}" loading="lazy" decoding="async"><span aria-hidden="true">↗</span></div>
         </a>
@@ -46,6 +46,6 @@ module.exports = ({catalog,settings,teaser,teaserPoster}) => {
     <h2 id="drop-about-title">About SLX Division</h2><div><p>SLX Division is an independent Ukrainian streetwear label drawn to underground Y2K, old record sleeves and the sharp linework of cyber sigilism.</p><a class="detail-link" href="about.html">About the brand <span aria-hidden="true">↗</span></a></div>
   </section>
   <section class="shell drop-follow" aria-labelledby="drop-follow-title">
-    <h2 id="drop-follow-title">FOLLOW THE DIVISION</h2><div class="drop-social">${socialLinks(settings)}</div>
+    <h2 id="drop-follow-title">FOLLOW THE DIVISION</h2><div class="drop-social" data-social-links>${socialLinks(settings)}</div>
   </section>`;
 };

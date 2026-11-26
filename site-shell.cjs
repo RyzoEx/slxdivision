@@ -1,4 +1,4 @@
-const { launchSignup } = require('./content/storefront.json');
+const launchSignup = require('./signup-config.cjs');
 
 const icon = (path) => `<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.45" aria-hidden="true">${path}</svg>`;
 const icons = {
@@ -56,7 +56,7 @@ function footer(settings) {
       <div><a class="brand chrome-brand footer-brand" href="/" aria-label="SLX home"><img src="assets/brand/logo.webp" width="100" height="73" alt="SLX"></a>
       <p>Independent Ukrainian streetwear.</p></div>
       <nav aria-label="Site links">${navLinks(links)}</nav>
-      <div class="footer-social" aria-label="Contact and social media">${socialLinks(settings)}${email}</div>
+      <div class="footer-social" data-social-links aria-label="Contact and social media">${socialLinks(settings)}${email}</div>
       ${launchSignup ? '<div class="footer-subscribe"><p>SLX updates</p><button class="primary" type="button" data-notify="newsletter">Subscribe</button></div>' : ''}
     </div>
     <div class="footer-bottom"><span>© SLX 2026</span><button class="text-button" type="button" data-cookie-settings>Cookie settings</button><a href="#top">Back to top</a></div>

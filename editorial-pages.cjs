@@ -1,5 +1,5 @@
 const { faqList, socialLinks, escape } = require('./site-shell.cjs');
-const { launchSignup } = require('./content/storefront.json');
+const launchSignup = require('./signup-config.cjs');
 const { grid, collectionsPage } = require('./inventory-pages.cjs');
 const { storefront } = require('./spreadshop/storefront.cjs');
 const empty = (text = 'No items yet.') =>
@@ -68,7 +68,7 @@ module.exports = ({ settings, catalog, spreadshop }) => ({
   },
   'contact.html': {
     title: 'Contact', desc: launchSignup ? 'Contact SLX and sign up for brand updates.' : 'Find official SLX Division contact and social channels.',
-    content: `<section class="shell story-grid"><article><h2>Contact SLX</h2><p>${settings.email ? `<a href="mailto:${escape(settings.email)}">${escape(settings.email)}</a>` : 'Contact details will be added before launch.'}</p><div class="footer-social">${socialLinks(settings)}</div></article>${launchSignup ? '<article><h2>Updates from SLX</h2><button class="primary" type="button" data-notify="newsletter">Subscribe</button></article>' : ''}</section>`,
+    content: `<section class="shell story-grid"><article><h2>Contact SLX</h2><p>${settings.email ? `<a href="mailto:${escape(settings.email)}">${escape(settings.email)}</a>` : 'Contact details will be added before launch.'}</p><div class="footer-social" data-social-links>${socialLinks(settings)}</div></article>${launchSignup ? '<article><h2>Updates from SLX</h2><button class="primary" type="button" data-notify="newsletter">Subscribe</button></article>' : ''}</section>`,
   },
   'faq.html': {
     title: 'FAQ', seoTitle:'Frequently asked questions',
