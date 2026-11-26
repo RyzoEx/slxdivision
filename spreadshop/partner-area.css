@@ -1,11 +1,15 @@
 /* SLX Division — paste into Spreadshop's Edit Shop CSS field. */
-:is(.SprdMain, #sprd-container) {
+:root {
   --slx-base: #0a0a0a;
   --slx-surface: #161616;
   --slx-paper: #f6f6f6;
   --slx-line: #424242;
   --slx-action: #f0f0f0;
   --slx-action-hover: #d5d5d5;
+  --slx-muted: #b8b8b8;
+}
+
+:is(.SprdMain, #sprd-container, .sprd--standalone, .sprd–standalone) {
   color-scheme: dark;
   font-family: Manrope, system-ui, sans-serif;
   background-color: var(--slx-base) !important;
@@ -18,15 +22,61 @@
 }
 
 :is(.SprdMain, #sprd-container) :is(
-  .sprd-header,
   .sprd-navigation,
   .sprd-department-filter,
-  .sprd-info-footer,
   .sprd-product-list-item
 ) {
   background-color: var(--slx-surface) !important;
   border-color: var(--slx-line) !important;
   color: var(--slx-paper) !important;
+}
+
+/* The standalone header and footer own their colours even outside #sprd-content. */
+:is(.sprd-header, .sprd-info-footer),
+:is(.SprdMain, #sprd-container) :is(header, footer),
+:is(.sprd--standalone, .sprd–standalone) :is(header, footer, [role="banner"], [role="contentinfo"]) {
+  color-scheme: dark;
+  background-color: var(--slx-base) !important;
+  color: var(--slx-paper) !important;
+  border-color: var(--slx-line) !important;
+}
+
+:is(.sprd-header, .sprd-info-footer, .SprdMain header, .SprdMain footer, #sprd-container header, #sprd-container footer,
+    .sprd--standalone [role="banner"], .sprd--standalone [role="contentinfo"],
+    .sprd–standalone [role="banner"], .sprd–standalone [role="contentinfo"]) :is(a, button, [role="button"]) {
+  color: inherit;
+}
+
+.sprd-info-footer p { color: var(--slx-muted); }
+
+:is(.sprd-header, .sprd-info-footer, .SprdMain footer, #sprd-container footer) a:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.22em;
+}
+
+/* Upload the actual teaser image in Homepage; these rules also work without it. */
+.sprd-startpage-teaser {
+  background-color: var(--slx-base) !important;
+  color: var(--slx-paper) !important;
+  border-block-end: 1px solid var(--slx-line);
+}
+
+.sprd-startpage-teaser :is(h1, h2, h3, [role="heading"]) {
+  color: var(--slx-paper) !important;
+  font-size: clamp(1.75rem, 4vw, 3.75rem);
+  font-weight: 800;
+  line-height: 1.06;
+  letter-spacing: -0.045em;
+  text-shadow: 0 2px 12px #000;
+}
+
+.sprd-startpage-teaser p {
+  color: var(--slx-paper) !important;
+  text-shadow: 0 1px 8px #000;
+}
+
+:is(.SprdMain, #sprd-container) :is(.sprd-detail-info, .sprd-product-list-item) {
+  color: var(--slx-paper);
 }
 
 :is(.SprdMain, #sprd-container) :is(.sprd-product-list-item a, .sprd-navigation-header__tab) {
@@ -64,7 +114,8 @@
   background-color: #242424 !important;
 }
 
-:is(.SprdMain, #sprd-container) :is(a, button, input, select, [tabindex]):focus-visible {
+:is(.SprdMain, #sprd-container, .sprd-header, .sprd-info-footer, .sprd--standalone, .sprd–standalone)
+  :is(a, button, input, select, [tabindex]):focus-visible {
   outline: 2px solid var(--slx-paper);
   outline-offset: 2px;
   box-shadow: 0 0 0 2px var(--slx-base);

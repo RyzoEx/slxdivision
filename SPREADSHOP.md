@@ -12,7 +12,15 @@
 
 ## Оформлення в Partner Area
 
-Відкрий **Advanced → HTML & CSS → Edit Shop CSS** і встав вміст [`spreadshop/partner-area.css`](spreadshop/partner-area.css). Той самий файл підключено у вбудованому фреймі SLX. У **Edit Shop Layout → Themes → Classic → Colours & Fonts** встанови фон `#0a0a0a`, панелі `#161616`, текст `#f6f6f6` і світлу основну кнопку. У **Logo** можна завантажити білу емблему SLX. Під час фінальної перевірки звірити контраст кнопок, фільтрів і мобільного меню, а також кошик і checkout на домені партнера. [Редактор CSS Spreadshop](https://www.spreadshop.com/blog/2018/04/24/css-tips-youve-always-wanted-to-know/) · [Налаштування теми](https://help.spreadshop.support/hc/en-gb/articles/360015950899-Open-Shop-for-YouTube)
+| Де | Що налаштувати |
+| --- | --- |
+| **Appearance → Themes / Colours & Fonts** | Якщо доступна тема Classic, вона дає контроль над палітрою та кнопками. Фон і шапка `#0a0a0a`, панелі `#161616`, текст та іконки `#f6f6f6`, другорядний текст `#b8b8b8`, основна кнопка `#f0f0f0` з текстом `#0a0a0a`. Якщо є окремі поля кольорів шапки й футера, задай їх у темі. |
+| **Appearance → Logo** або **Page Settings → Header** | Завантажити [білу емблему SLX на прозорому фоні](spreadshop/appearance/slx-header-380x68.png) замість текстової назви. |
+| **Page Settings → Homepage → Teaser** | Завантажити [темний банер для Classic (1400 × 320)](spreadshop/appearance/slx-hero-classic-1400x320.png). Ввести заголовок `Heavy DAngels`, підзаголовок `DROP 001 · SLX Division`. Якщо в прев’ю є посилання на колекцію, задати підпис кнопки `View collection`. Текст задається в редакторі, тому залишається читабельним у мобільній версії. Для інших тем звірити рекомендований розмір з полем завантаження. |
+| **Appearance → Promo banner** або **Homepage → Promotion Appearance** | Смуга «DEMO - 0%» у прев’ю належить промомодулю. Перевірити його перемикач і кольори окремо від головного банера. |
+| **Advanced → HTML & CSS → Edit Shop CSS** | Замінити старий код вмістом [`partner-area.css`](spreadshop/partner-area.css). Він оформлює доступну розмітку шапки й футера, фон, типографіку банера, картки, кнопки та фокус із клавіатури. Той самий файл підключено у фреймі SLX. |
+
+Підписи пунктів і підтримка кастомного CSS залежать від версії вітрини. У фінальному прев’ю звірити контраст шапки, меню, банера й футера на телефоні та комп’ютері. [Палітра й промобанер](https://help.spreadshop.support/hc/en-gb/articles/360015950899-Open-Shop-for-YouTube) · [Блоки головної](https://help.spreadshop.support/hc/en-gb/articles/360010528459-Setting-up-a-Spreadshop-Start-Page) · [Розміри банерів за темами](https://help.spreadshop.support/hc/de/articles/360016949160-Die-richtige-Teaser-Gr%C3%B6%C3%9Fe-f%C3%BCr-dein-Shop-Theme) · [Оновлення вітрини й підтримка Custom CSS](https://www.spreadshop.de/helpcenter/blog/faq-migration-zum-neuen-shop/)
 
 Поле зовнішнього сайту в **Embed Shop in Website** може ввімкнути переадресацію з адреси Spreadshop. Перед збереженням цієї прив’язки перевірити цільову сторінку SLX після погодження запуску. [Документація Spreadshop про переадресацію](https://help.spreadshop.support/hc/en-gb/articles/360010420000-Install-WordPress-Plugin)
 
