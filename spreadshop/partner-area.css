@@ -9,8 +9,8 @@
 
 /* Shop chrome can be a sibling of the catalog rather than a descendant. */
 :is(.SprdMain, #sprd-container, #sprd-content, .sprd--standalone, .sprd–standalone,
-    .sprd-header, .sprd-info-footer,
-    body:has(#sprd-content, .sprd-startpage-teaser)
+    .sprd-header, .sprd-navigation__nav-bar, .sprd-info-footer, .sprd-footer,
+    body:has(#sprd-content, .sprd-startpage-teaser, .sprd-navigation__nav-bar)
       :is(header, footer, [role="banner"], [role="contentinfo"]):not(main *, article *, dialog *)) {
   color-scheme: dark;
   background-color: var(--slx-base) !important;
@@ -29,7 +29,7 @@
 
 /* Menus and dialogs can be rendered in a portal outside #sprd-container. */
 :is(.sprd-department-filter__menu, .sprd-language-switch__languages,
-    body:has(#sprd-content, .sprd-startpage-teaser, [data-spreadshop-mount])
+    body:has(#sprd-content, .sprd-startpage-teaser, .sprd-navigation__nav-bar, [data-spreadshop-mount])
       :is(dialog, [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"])) {
   color-scheme: dark;
   background-color: var(--slx-surface) !important;
@@ -38,9 +38,9 @@
 }
 
 /* Set text on known dark sections. Control color pairs are defined below. */
-:is(#sprd-content, .SprdMain, #sprd-container, .sprd-header, .sprd-info-footer,
+:is(#sprd-content, .SprdMain, #sprd-container, .sprd-header, .sprd-navigation__nav-bar, .sprd-info-footer, .sprd-footer,
     .sprd-department-filter__menu, .sprd-language-switch__languages,
-    body:has(#sprd-content, .sprd-startpage-teaser, [data-spreadshop-mount])
+    body:has(#sprd-content, .sprd-startpage-teaser, .sprd-navigation__nav-bar, [data-spreadshop-mount])
       :is(header, footer, [role="banner"], [role="contentinfo"], dialog, [role="dialog"],
           [role="alertdialog"], [role="menu"], [role="listbox"]))
   :where(h1, h2, h3, h4, h5, h6, [role="heading"], legend, label, p, [role="status"], [role="alert"],
@@ -50,12 +50,13 @@
 }
 
 :is(#sprd-content, .SprdMain, #sprd-container) :is(.sprd-breadcrumb, [aria-label*="breadcrumb" i]) a,
-body:has(#sprd-content, .sprd-startpage-teaser) .sprd-info-footer :where(p, small) {
+body:has(#sprd-content, .sprd-startpage-teaser, .sprd-navigation__nav-bar)
+  :is(.sprd-info-footer, .sprd-footer) :where(p, small) {
   color: var(--slx-muted) !important;
 }
 
 /* Some themes put their opaque background on an inner chrome wrapper. */
-body:has(#sprd-content, .sprd-startpage-teaser)
+body:has(#sprd-content, .sprd-startpage-teaser, .sprd-navigation__nav-bar)
   :is(header, footer, [role="banner"], [role="contentinfo"]):not(main *, article *, dialog *)
   > :where(div, nav, section) {
   background-color: var(--slx-base) !important;
@@ -87,8 +88,8 @@ body:has(#sprd-content, .sprd-startpage-teaser)
 }
 
 /* Pair a control's actual background and ink. Descendant labels share its ink. */
-:is(#sprd-content, .SprdMain, #sprd-container, .sprd-header, .sprd-info-footer,
-    body:has(#sprd-content, .sprd-startpage-teaser, [data-spreadshop-mount])
+:is(#sprd-content, .SprdMain, #sprd-container, .sprd-header, .sprd-navigation__nav-bar, .sprd-info-footer, .sprd-footer,
+    body:has(#sprd-content, .sprd-startpage-teaser, .sprd-navigation__nav-bar, [data-spreadshop-mount])
       :is(header, footer, [role="banner"], [role="contentinfo"], dialog, [role="dialog"],
           [role="alertdialog"], [role="menu"], [role="listbox"]))
   :where(button, .sprd-button, [role="button"], [role="tab"], [role="menuitem"],
@@ -112,7 +113,8 @@ body:has(#sprd-content, .sprd-startpage-teaser)
 
   &:where(.sprd-btn-secondary) { min-height: 44px; }
 
-  &:hover {
+  &:hover,
+  &:where([data-focus]) {
     --slx-control-edge: var(--slx-muted);
     text-decoration: underline;
     text-underline-offset: 0.18em;
@@ -120,7 +122,7 @@ body:has(#sprd-content, .sprd-startpage-teaser)
 
   &:active,
   &:where([aria-selected="true"], [aria-pressed="true"], [aria-checked="true"],
-    [data-state="selected"], [data-state="checked"], .sprd-active) {
+    [data-state="selected"], [data-state="checked"], [data-selected], .sprd-active) {
     --slx-control-edge: var(--slx-control-ink);
     outline: 1px solid var(--slx-control-ink);
     outline-offset: -2px;
@@ -142,8 +144,21 @@ body:has(#sprd-content, .sprd-startpage-teaser)
   }
 }
 
+/* The country switcher ships with an opaque bg-primary utility. */
+body:has(#sprd-content, .sprd-navigation__nav-bar) .sprd-navigation__nav-bar :is(
+  .sprd-navigation__nav-bar__desktop-links button,
+  .sprd-navigation__nav-bar__buttons button[aria-haspopup="menu"],
+  .sprd-icon-button
+):not(:disabled, [aria-disabled="true"]) {
+  --slx-control-fill: transparent;
+}
+
+.sprd-navigation__nav-bar :is(.shop-name, .sprd-navigation__nav-bar__desktop-links li:has(> button)) {
+  color: var(--slx-paper) !important;
+}
+
 :is(#sprd-content, .SprdMain, #sprd-container,
-    body:has(#sprd-content, .sprd-startpage-teaser, [data-spreadshop-mount])
+    body:has(#sprd-content, .sprd-startpage-teaser, .sprd-navigation__nav-bar, [data-spreadshop-mount])
       :is(dialog, [role="dialog"], [role="alertdialog"], [role="menu"]))
   :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="image"]),
     select, textarea) {
@@ -159,12 +174,14 @@ body:has(#sprd-content, .sprd-startpage-teaser)
 }
 
 /* Only monochrome paths in header controls follow the text color. */
-:is(.sprd-header, body:has(#sprd-content, .sprd-startpage-teaser) :is(header, [role="banner"]):not(main *))
+:is(.sprd-header, .sprd-navigation__nav-bar,
+    body:has(#sprd-content, .sprd-startpage-teaser) :is(header, [role="banner"]):not(main *))
   :where(button, a[href], [role="button"]) :where(svg, svg *) {
   color: inherit !important;
 }
 
-:is(.sprd-header, body:has(#sprd-content, .sprd-startpage-teaser) :is(header, [role="banner"]):not(main *))
+:is(.sprd-header, .sprd-navigation__nav-bar,
+    body:has(#sprd-content, .sprd-startpage-teaser) :is(header, [role="banner"]):not(main *))
   :where(button, a[href], [role="button"]) :where(svg, svg *) {
   &[stroke="black" i], &[stroke="#000" i], &[stroke="#000000" i] { stroke: currentColor !important; }
   &[fill="black" i], &[fill="#000" i], &[fill="#000000" i], &:is(svg:not([fill], [stroke])) {
@@ -172,8 +189,8 @@ body:has(#sprd-content, .sprd-startpage-teaser)
   }
 }
 
-:is(#sprd-content, .SprdMain, #sprd-container, .sprd-header, .sprd-info-footer,
-    body:has(#sprd-content, .sprd-startpage-teaser, [data-spreadshop-mount])
+:is(#sprd-content, .SprdMain, #sprd-container, .sprd-header, .sprd-navigation__nav-bar, .sprd-info-footer, .sprd-footer,
+    body:has(#sprd-content, .sprd-startpage-teaser, .sprd-navigation__nav-bar, [data-spreadshop-mount])
       :is(header, footer, [role="banner"], [role="contentinfo"], dialog, [role="dialog"],
           [role="alertdialog"], [role="menu"], [role="listbox"]))
   :where(a, button, input, select, textarea, [tabindex]):focus-visible {
