@@ -1,0 +1,71 @@
+/* SLX Division — paste into Spreadshop's Edit Shop CSS field. */
+:is(.SprdMain, #sprd-container) {
+  --slx-base: #0a0a0a;
+  --slx-surface: #161616;
+  --slx-paper: #f6f6f6;
+  --slx-line: #424242;
+  --slx-action: #f0f0f0;
+  --slx-action-hover: #d5d5d5;
+  color-scheme: dark;
+  font-family: Manrope, system-ui, sans-serif;
+  background-color: var(--slx-base) !important;
+  color: var(--slx-paper) !important;
+}
+
+:is(.SprdMain, #sprd-container) #sprd-content {
+  background-color: var(--slx-base) !important;
+  color: var(--slx-paper) !important;
+}
+
+:is(.SprdMain, #sprd-container) :is(
+  .sprd-header,
+  .sprd-navigation,
+  .sprd-department-filter,
+  .sprd-info-footer,
+  .sprd-product-list-item
+) {
+  background-color: var(--slx-surface) !important;
+  border-color: var(--slx-line) !important;
+  color: var(--slx-paper) !important;
+}
+
+:is(.SprdMain, #sprd-container) :is(.sprd-product-list-item a, .sprd-navigation-header__tab) {
+  color: var(--slx-paper);
+}
+
+:is(.SprdMain, #sprd-container) :is(.sprd-product-list-item a, .sprd-info-footer a):hover {
+  text-decoration: underline;
+  text-underline-offset: 0.22em;
+}
+
+:is(.SprdMain, #sprd-container) .sprd-button.sprd-btn-primary {
+  min-height: 44px;
+  border-radius: 999px;
+  border-color: #aaa !important;
+  background-color: var(--slx-action) !important;
+  color: var(--slx-base) !important;
+  font-weight: 800;
+}
+
+:is(.SprdMain, #sprd-container) .sprd-button.sprd-btn-primary:not(:disabled, [aria-disabled="true"]):hover {
+  background-color: var(--slx-action-hover) !important;
+}
+
+:is(.SprdMain, #sprd-container) .sprd-button.sprd-btn-secondary {
+  min-height: 44px;
+  border-radius: 6px;
+  border-color: #666 !important;
+  background-color: #191919 !important;
+  color: var(--slx-paper) !important;
+}
+
+:is(.SprdMain, #sprd-container) .sprd-button.sprd-btn-secondary:not(:disabled, [aria-disabled="true"]):hover {
+  border-color: #aaa !important;
+  background-color: #242424 !important;
+}
+
+:is(.SprdMain, #sprd-container) :is(a, button, input, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--slx-paper);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--slx-base);
+}

@@ -1,8 +1,8 @@
 const shop = Object.freeze({
   name:'slxdivision',
-  id:'1599665',
+  baseId:'myShop',
   prefix:'https://slxdivision.myspreadshop.co.uk',
-  script:'https://slxdivision.myspreadshop.net/js/shopclient.nocache.js',
+  script:'https://slxdivision.myspreadshop.co.uk/shopfiles/shopclient/shopclient.nocache.js',
   locale:'en_GB',
   frameOrigin:'https://slx-spreadshop-frame.vercel.app',
 });

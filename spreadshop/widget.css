@@ -1,33 +1,10 @@
 :root {
   color-scheme: dark;
-  --slx-base: #0a0a0a;
-  --slx-surface: #161616;
-  --slx-paper: #f6f6f6;
-  --slx-line: #424242;
-  background: var(--slx-base);
-  color: var(--slx-paper);
-  font-family: system-ui, sans-serif;
+  background: #0a0a0a;
+  color: #f6f6f6;
+  font-family: Manrope, system-ui, sans-serif;
 }
 
 body { margin: 0; }
-#spreadshop-mount { min-height: 200px; }
+[data-spreadshop-mount] { min-height: 200px; }
 #spreadshop-message { padding: 24px; margin: 0; }
-
-#spreadshop-mount :is(.SprdMain, #sprd-container, #sprd-content) {
-  background-color: var(--slx-base);
-  color: var(--slx-paper);
-  font-family: inherit;
-}
-
-#spreadshop-mount :is(.sprd-header, .sprd-navigation, .sprd-department-filter, .sprd-info-footer, .sprd-product-list-item) {
-  background-color: var(--slx-surface);
-  border-color: var(--slx-line);
-  color: var(--slx-paper);
-}
-
-#spreadshop-mount .sprd-product-list-item a { color: var(--slx-paper); }
-#spreadshop-mount :is(a, button, input, select, [tabindex]):focus-visible {
-  outline: 2px solid var(--slx-paper);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--slx-base);
-}

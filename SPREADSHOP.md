@@ -2,13 +2,19 @@
 
 Перехід підготовлено у гілці інтеграції. Публічна вітрина SLX, колекції та архів залишаються у власному сайті. Вбудований каталог використовує офіційний клієнт Spreadshop, магазин `slxdivision`, ID `1599665` і локаль `en_GB` для фунтів стерлінгів. Картки SLX ведуть до каталогу партнера. Доступні варіанти, ціни, кошик, оплату, доставку та повернення визначає Spreadshop. [Документація JavaScript](https://help.spreadshop.support/hc/en-gb/articles/360010529039-Website-Integration-with-JavaScript)
 
+Конфігурацію звірено з фрагментом, який Partner Area згенерував для SLX. Використовуємо `shopName: 'slxdivision'`, `baseId: 'myShop'`, `locale: 'en_GB'`, `prefix: 'https://slxdivision.myspreadshop.co.uk'` і скрипт `https://slxdivision.myspreadshop.co.uk/shopfiles/shopclient/shopclient.nocache.js`. Параметри `updateMetadata: false` і `usePushState: false` зберігають метадані SLX і поточну навігацію вбудованого каталогу.
+
 ## Локальна перевірка
 
 Запусти `npm run preview:spreadshop` і відкрий `http://127.0.0.1:4180/shop.html#spreadshop`. Звичайне прев’ю показує COMING SOON без запитів до Spreadshop. Для перевірки інтеграції встанови в сеансі термінала `SLX_SPREADSHOP_PREVIEW_CATALOG=1` перед запуском команди. Наприклад, у PowerShell це `$env:SLX_SPREADSHOP_PREVIEW_CATALOG = '1'`. У режимі перевірки віджет працює в ізольованому фреймі `http://localhost:4181`. Прев’ю не використовує робочі сесії чи БД SLX та обмежує форми, спливаючі вікна й відкриття checkout у верхньому вікні.
 
 Фрейм стає видимим, коли офіційний клієнт завантажив вміст каталогу. При статусі «This Shop is not active» вітрина показує COMING SOON, а при мережевій помилці або таймауті — повідомлення про тимчасову недоступність.
 
-Для узгодженого вигляду в Partner Area відкрий **Edit Shop Layout → Themes → Classic**, потім **Colours & Fonts**. Палітра SLX — фон `#0a0a0a`, панелі `#161616`, текст `#f6f6f6`. Для основної кнопки підійде `#f6f6f6` з текстом `#0a0a0a`. Ці параметри діють на стороні Spreadshop. Вбудований фрейм також стилізує доступні секції каталогу. Під час фінальної перевірки звірити контраст кнопок і фільтрів, мобільне меню, кошик і сторінки, які відкриваються вже на домені партнера. [Налаштування оформлення Spreadshop](https://help.spreadshop.support/hc/en-gb/articles/360015950899-Open-Shop-for-YouTube)
+## Оформлення в Partner Area
+
+Відкрий **Advanced → HTML & CSS → Edit Shop CSS** і встав вміст [`spreadshop/partner-area.css`](spreadshop/partner-area.css). Той самий файл підключено у вбудованому фреймі SLX. У **Edit Shop Layout → Themes → Classic → Colours & Fonts** встанови фон `#0a0a0a`, панелі `#161616`, текст `#f6f6f6` і світлу основну кнопку. У **Logo** можна завантажити білу емблему SLX. Під час фінальної перевірки звірити контраст кнопок, фільтрів і мобільного меню, а також кошик і checkout на домені партнера. [Редактор CSS Spreadshop](https://www.spreadshop.com/blog/2018/04/24/css-tips-youve-always-wanted-to-know/) · [Налаштування теми](https://help.spreadshop.support/hc/en-gb/articles/360015950899-Open-Shop-for-YouTube)
+
+Поле зовнішнього сайту в **Embed Shop in Website** може ввімкнути переадресацію з адреси Spreadshop. Перед збереженням цієї прив’язки перевірити цільову сторінку SLX після погодження запуску. [Документація Spreadshop про переадресацію](https://help.spreadshop.support/hc/en-gb/articles/360010420000-Install-WordPress-Plugin)
 
 ## Перед публікацією
 

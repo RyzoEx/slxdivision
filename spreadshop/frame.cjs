@@ -5,6 +5,7 @@ const { shop, launchApproved } = require('./config.cjs');
 
 const loader = readFileSync(path.join(__dirname,'loader.js'),'utf8');
 const styles = readFileSync(path.join(__dirname,'widget.css'),'utf8');
+const partnerStyles = readFileSync(path.join(__dirname,'partner-area.css'),'utf8');
 const provider = [
   'https://*.myspreadshop.net','https://*.myspreadshop.co.uk','https://*.spreadshop.net',
   'https://*.spreadshirt.net','https://*.spreadshirt.com','https://*.spreadshirt.co.uk','https://*.spreadshirtmedia.net',
@@ -16,8 +17,8 @@ function frameAssets(parentOrigin) {
     policy:`${policy}; frame-ancestors ${parentOrigin}`,
     html:`<!doctype html><html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="robots" content="noindex"><meta http-equiv="Content-Security-Policy" content="${policy}">
-    <title>Каталог SLX · Spreadshop</title><link rel="stylesheet" href="/widget.css"><script defer src="/loader.js"></script></head>
-    <body><main><div id="spreadshop-mount" data-shop-id="${shop.id}" data-shop-prefix="${shop.prefix}" data-shop-script="${shop.script}"
+    <title>Каталог SLX · Spreadshop</title><link rel="stylesheet" href="/widget.css"><link rel="stylesheet" href="/partner-area.css"><script defer src="/loader.js"></script></head>
+    <body><main><div id="${shop.baseId}" data-spreadshop-mount data-shop-name="${shop.name}" data-shop-prefix="${shop.prefix}" data-shop-script="${shop.script}"
       data-shop-locale="${shop.locale}" data-parent-origin="${parentOrigin}"><p id="spreadshop-message">Завантажуємо каталог Spreadshop…</p></div></main></body></html>`,
   };
 }
@@ -29,6 +30,7 @@ function startPreviewFrame(parentPort,port) {
     const files = {
       '/': ['text/html; charset=utf-8',html],
       '/widget.css':['text/css; charset=utf-8',styles],
+      '/partner-area.css':['text/css; charset=utf-8',partnerStyles],
       '/loader.js':['text/javascript; charset=utf-8',loader],
     };
     const selected=files[req.url];
@@ -48,6 +50,7 @@ function buildFrame(env) {
   mkdirSync(output,{recursive:true});
   writeFileSync(path.join(output,'index.html'),html);
   writeFileSync(path.join(output,'widget.css'),styles);
+  writeFileSync(path.join(output,'partner-area.css'),partnerStyles);
   writeFileSync(path.join(output,'loader.js'),loader);
 }
 

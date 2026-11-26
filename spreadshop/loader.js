@@ -1,8 +1,8 @@
 (() => {
-  const mount = document.querySelector('#spreadshop-mount');
-  const { shopId, shopPrefix, shopScript, shopLocale, parentOrigin } = mount.dataset;
+  const mount = document.querySelector('[data-spreadshop-mount]');
+  const { shopName, shopPrefix, shopScript, shopLocale, parentOrigin } = mount.dataset;
   window.spread_shop_config = {
-    shopName:shopId, prefix:shopPrefix, baseId:mount.id, locale:shopLocale,
+    shopName, prefix:shopPrefix, baseId:mount.id, locale:shopLocale,
     updateMetadata:false, usePushState:false,
   };
   const placeholder = document.querySelector('#spreadshop-message');
