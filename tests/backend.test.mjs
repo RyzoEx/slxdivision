@@ -114,6 +114,10 @@ test('Preview signup, roles and signed-in management use real database state',as
   const content=await (await request('admin-content',null,editor)).json();
   const collection={...content.collection[0],kind:'collection',status:'published',name:'Draft collection only'};
   assert.equal((await request('admin-content-save',collection,editor)).status,200);
+  const origins=await handler(new Request(`${origin}/api/commerce?op=admin-content-save`,{
+    method:'POST',headers:{origin:'https://untrusted.example.test',cookie:editor,'content-type':'application/json'},body:JSON.stringify(collection),
+  }));
+  assert.equal(origins.status,403);
   assert.doesNotMatch(await (await request('store-content')).text(),/Draft collection only/);
   assert.equal((await request('admin-content-save',{...collection,cover:'https://example.test/photo'},editor)).status,400);
   const bytes=await readFile('assets/brand/logo.webp');
@@ -124,6 +128,10 @@ test('Preview signup, roles and signed-in management use real database state',as
   assert.deepEqual(await dry(),{simulated:true,duplicate:false});
   assert.deepEqual(await dry(),{simulated:true,duplicate:true});
   assert.match(await (await request('admin-email&template=launch',null,owner)).text(),/DROP 001 has launched/);
+  assert.equal((await request('interest',{...signup,email:'=formula@example.test'})).status,201);
+  assert.match(await (await request('admin-subscribers-csv',null,owner)).text(),/"'=formula@example\.test"/);
+  await db.query('UPDATE slx_sessions SET expires_at=now() WHERE token_hash=$1',[hashToken(analyst.split('=')[1])]);
+  assert.equal((await request('admin-summary',null,analyst)).status,401);
   await provisionPreviewStaff(db,'phase6-owner@example.test','owner',`${password} changed`);
   assert.equal((await request('admin-system',null,owner)).status,401);
   env.VERCEL_ENV='production';

@@ -194,7 +194,7 @@ test('server-backed auth, protected admin, prelaunch, isolated order pipeline an
     assert.equal((await request('admin-product&mode=test',{cookie:ownerCookie,body:{id:item}})).status,403);
     Object.assign(env,{
       VERCEL_ENV:'production', SLX_ALLOW_LIVE_ORDERS:'1', SLX_SUPABASE_URL:'https://auth.example.test',
-      SLX_SUPABASE_ANON_KEY:'test-key', SLX_EVENT_WEBHOOK:'https://mail.example.test/slx',
+      SLX_SUPABASE_ANON_KEY:'test-key', SLX_EVENT_WEBHOOK:'https://mail.example.test/slx', SLX_LAUNCH_MAIL_APPROVED:'1',
       SLX_UNSUBSCRIBE_SECRET:'test-only-secret-for-contract-test',
       SLX_TELEGRAM_BOT_TOKEN:'123456:synthetic-token-only-for-test',SLX_TELEGRAM_CHAT_ID:'-100123456',
     });

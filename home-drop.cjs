@@ -17,7 +17,8 @@ module.exports = ({catalog,settings,teaser,teaserPoster}) => {
         <a class="primary" href="#collection-preview" data-metric="drop_click">Explore the collection <span aria-hidden="true">↓</span></a>
         ${launchSignup ? '<button class="secondary" type="button" data-notify="newsletter">Get collection updates</button>' : ''}
       </div>
-      <div class="drop-hero-mark"><img src="/assets/brand/logo.webp" width="1035" height="754" alt="" fetchpriority="high"></div>
+      <div class="drop-hero-mark"><img src="/assets/brand/logo.webp" srcset="/assets/brand/logo-480.webp 480w, /assets/brand/logo.webp 1035w"
+        sizes="(max-width:570px) 58vw, (max-width:1400px) 38vw, 540px" width="1035" height="754" alt="" fetchpriority="high"></div>
     </div>
   </section>
   <section class="shell drop-collection" id="collection-preview" data-collection-event="heavy-dangels" aria-labelledby="drop-collection-title">
@@ -27,9 +28,11 @@ module.exports = ({catalog,settings,teaser,teaserPoster}) => {
       const art=item.artwork;
       const thumbnail=item.photos[0] ?? art;
       const name=artworkNames.get(item.id);
+      const responsive=thumbnail.src.endsWith('-preview.webp')
+        ? ` srcset="/${escape(thumbnail.src.replace('-preview.webp','-web.webp'))} 300w, /${escape(thumbnail.src)} ${thumbnail.width}w" sizes="(max-width:800px) 40vw, 21vw"` : '';
       return `<article class="drop-art" data-design-listing="${item.id}">
         <a class="drop-art-link" href="/${escape(art.src)}" data-artwork="${escape(item.id)}" data-artwork-name="${escape(name)}" aria-label="Enlarge ${escape(name)} artwork">
-          <div class="drop-art-image"><img src="/${escape(thumbnail.src)}" width="${thumbnail.width}" height="${thumbnail.height}" alt="${escape(art.alt)}" loading="lazy" decoding="async"><span aria-hidden="true">↗</span></div>
+          <div class="drop-art-image"><img src="/${escape(thumbnail.src)}"${responsive} width="${thumbnail.width}" height="${thumbnail.height}" alt="${escape(art.alt)}" loading="lazy" decoding="async"><span aria-hidden="true">↗</span></div>
         </a>
         <div class="drop-art-caption"><h3><a href="product-${escape(item.id)}.html">${escape(name)}</a></h3><p>Coming soon</p></div>
       </article>`;

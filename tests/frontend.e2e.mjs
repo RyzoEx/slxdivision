@@ -72,6 +72,7 @@ test('browser verifies Preview signup, responsive management and local GA consen
       await page.setViewportSize({width,height:920});
       await page.getByRole('button',{name:label,exact:true}).click();
       await page.getByRole('heading',{name:label,exact:true}).first().waitFor();
+      if (slug==='designs') await page.locator('#admin-panel details > summary').first().click();
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),width);
       if (output) await page.screenshot({path:resolve(output,`${slug}-${width}.png`),fullPage:true});
     }
@@ -89,6 +90,12 @@ test('browser verifies Preview signup, responsive management and local GA consen
   await page.getByText('Записів за цими фільтрами немає.').waitFor();
   await page.getByRole('button',{name:'Система',exact:true}).click();
   await page.getByText(/Підключено/).waitFor();
+  await page.getByRole('button',{name:'Вебсайт',exact:true}).click();
+  await page.getByLabel('Hero',{exact:true}).fill('Phase 7 test draft');
+  await page.getByRole('button',{name:'Переглянути чернетку',exact:true}).click();
+  await page.getByRole('heading',{name:'Phase 7 test draft',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Зберегти чернетку'}).click();
+  await page.getByText('Збережено.',{exact:true}).waitFor();
   await page.getByRole('button',{name:'Вийти'}).click();
   await page.getByLabel('Пароль').waitFor();
   assert.equal((await page.request.get(`${origin}/api/commerce?op=admin-subscribers`)).status(),401);

@@ -275,6 +275,7 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       }
       if (op==='admin-collection') {
         requireThat(editor(user) && (mode==='live' || env.VERCEL_ENV==='preview'),403,'Колекції редагуються лише в робочому режимі.');
+        requireThat(env.VERCEL_ENV!=='production' || env.SLX_CONTENT_PUBLISH_APPROVED==='1',409,'Для публікації потрібне погодження.');
         return json(await updateCollection(db,user,data));
       }
       if (op==='admin-content-save' || op==='admin-media-validate') {
@@ -287,6 +288,7 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       }
       if (op==='admin-social') {
         requireThat(editor(user) && (mode==='live' || env.VERCEL_ENV==='preview'),403,'Недостатньо прав.');
+        requireThat(env.VERCEL_ENV!=='production' || env.SLX_CONTENT_PUBLISH_APPROVED==='1',409,'Для публікації потрібне погодження.');
         return json({social:await updateSocial(db,user,data)});
       }
       if (op==='admin-subscriber-delete') {
@@ -299,6 +301,7 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       }
       if (op==='admin-notify') {
         requireThat(manager(user) && mode==='live',403,'Надсилання доступне команді у робочому режимі.');
+        requireThat(env.SLX_LAUNCH_MAIL_APPROVED==='1',409,'Розсилку ще не погоджено.');
         const config = await settings(db);
         requireThat(config.sales && readyForSale(config,await catalog(db),env),409,'Спочатку відкрийте продажі.');
         return json(await notifyLaunch(db,user,data.id,env,origin,fetcher));
@@ -309,10 +312,12 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       }
       if (op==='admin-upload') {
         requireThat(manager(user) && mode==='live',403,'Завантаження доступне лише в робочому режимі.');
+        requireThat(env.SLX_MEDIA_STORAGE_APPROVED==='1' && auth.storageReady,503,'Зберігання файлів ще не погоджено.');
         const type = Object.hasOwn(fileTypes,data.extension) && fileTypes[data.extension];
         requireThat(type && typeof data.base64==='string' && /^[A-Za-z0-9+/]+={0,2}$/.test(data.base64),400,'Виберіть JPEG, PNG або WebP.');
         const bytes = Buffer.from(data.base64,'base64');
         requireThat(bytes.length>12 && bytes.length<=1400000 && type.check(bytes),400,'Зображення має бути до 1,4 МБ і відповідати формату.');
+        validateMedia({mime:type.mime,base64:data.base64});
         const key = `${newId()}.${data.extension}`;
         await auth.upload(key,type.mime,bytes);
         await audit(db,user,'media.upload',key);

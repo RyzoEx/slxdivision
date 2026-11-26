@@ -11,19 +11,24 @@
   function show(state) {
     const ready = state === 'ready';
     const inactive = state === 'inactive';
+    const offline = state === 'offline';
+    const loading = state === 'loading';
     frame.toggleAttribute('inert',!ready);
     status.hidden = ready;
     if (previewNote) previewNote.hidden = !ready;
-    if (fallback) fallback.hidden = inactive;
+    if (fallback) fallback.hidden = inactive || offline || loading;
     if (ready) return;
-    heading.lang = inactive ? 'en' : 'en';
-    heading.textContent = inactive ? 'COMING SOON' : 'Catalog temporarily unavailable';
+    heading.textContent = inactive ? 'COMING SOON' : offline ? 'You’re offline' : loading ? 'Loading catalog' : 'Catalog temporarily unavailable';
     message.textContent = inactive
       ? 'Sales have yet to open.'
-      : 'Explore the SLX artwork below or try again later.';
+      : offline ? 'You can still browse any SLX artwork already loaded. Reconnect to check the catalogue.'
+        : loading ? 'Connecting to Spreadshop…' : 'Explore the SLX artwork below or try again later.';
   }
 
-  const timeout = setTimeout(() => show('unavailable'),15000);
+  const deferFailure = () => setTimeout(() => show(navigator.onLine ? 'unavailable' : 'offline'),15000);
+  let timeout = deferFailure();
+  window.addEventListener('offline',()=>{clearTimeout(timeout);show('offline');});
+  window.addEventListener('online',()=>{clearTimeout(timeout);show('loading');frame.src=frame.src;timeout=deferFailure();});
   window.addEventListener('message', event => {
     if (event.origin !== origin || event.source !== frame.contentWindow) return;
     if (event.data?.type === 'slx-spreadshop-click' && !frame.hasAttribute('inert')) {
@@ -36,6 +41,6 @@
     if (!Number.isInteger(height) || height < 200 || height > 5000) return;
     clearTimeout(timeout);
     frame.height = String(height);
-    show(state);
+    show(navigator.onLine ? state : 'offline');
   });
 })();

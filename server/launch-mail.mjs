@@ -21,11 +21,13 @@ export function launchMailReady(env) {
 
 const escape = value => value.replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 export function launchTemplate(event, productName) {
-  return `<div lang="uk" style="background:#0a0a0a;color:#f6f6f6;padding:28px;font:16px Arial,sans-serif">
-  <p style="color:#bbb;letter-spacing:.14em">SLX DIVISION</p><h1>${escape(productName)}</h1>
-  <p>Ви просили повідомити про початок продажів. Цей дизайн уже доступний.</p>
-  <p><a style="color:#f6f6f6" href="${escape(event.url)}">Переглянути дизайн</a></p>
-  <p><a style="color:#bbb" href="${escape(event.unsubscribe)}">Відписатися або видалити заявку</a></p></div>`;
+  const origin=escape(new URL(event.url).origin);
+  return `<div lang="en" style="background:#0a0a0a;color:#f6f6f6;padding:28px;font:16px Arial,sans-serif"><div style="max-width:540px;margin:auto">
+  <img src="${origin}/assets/brand/logo.webp" alt="SLX Division" width="100" style="height:auto">
+  <p style="color:#bbb;letter-spacing:.14em">SLX DIVISION · HEAVY DANGELS</p><h1>${escape(productName)}</h1>
+  <p>You asked to hear when this design became available.</p>
+  <p><a style="color:#f6f6f6" href="${escape(event.url)}">View the design</a></p>
+  <p><a style="color:#bbb" href="${escape(event.unsubscribe)}">Unsubscribe or delete your signup</a></p></div></div>`;
 }
 
 export function launchMail(env, fetcher) {
@@ -49,12 +51,12 @@ export function launchMail(env, fetcher) {
       from:{name:'SLX Division',address:env.SLX_SMTP_USER},
       to:{address:event.email},
       messageId:`<slx-${event.id}@${new URL(event.url).hostname}>`,
-      subject:`SLX Division · ${productName} вже в продажу`,
+      subject:`SLX Division · ${productName} is available`,
       html:launchTemplate(event,productName),
       text:[
-        `Ви просили повідомити, коли ${productName} з’явиться у продажу.`,
-        `Переглянути річ: ${event.url}`,
-        `Відписатися від сповіщення: ${event.unsubscribe}`,
+        `You asked to hear when ${productName} became available.`,
+        `View the design: ${event.url}`,
+        `Unsubscribe or delete your signup: ${event.unsubscribe}`,
       ].join('\n\n'),
     });
     if (!info.accepted.length) throw new Error('Delivery rejected');

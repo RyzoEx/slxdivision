@@ -1,5 +1,7 @@
 # SLX Division backend preview
 
+Phase 7 can run independently via `npm run preview:admin`. See [local owner setup](ADMIN_GUIDE.md), [database isolation and recovery](DATABASE_SETUP.md) and [deployment approval boundaries](DEPLOYMENT.md).
+
 `codex/backend-infrastructure` uses a standalone Neon Free database for Vercel Preview. Production continues to use its current PostgreSQL, Supabase Auth and Storage. The preview uses independent staff credentials and accepts only reserved `.test` signup addresses. Preview supports collection and social edits and subscriber removal within its own database. These settings never affect `main`.
 
 ## Provisioning after approval

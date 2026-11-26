@@ -120,6 +120,8 @@ if (!localPages) {
     const destination = path.join(output, asset);
     mkdirSync(path.dirname(destination), { recursive: true });
     copyFileSync(path.join(root, asset), destination);
+    const smaller=asset.replace(/-preview\.webp$/,'-web.webp');
+    if (smaller!==asset && existsSync(path.join(root,smaller))) copyFileSync(path.join(root,smaller),path.join(output,smaller));
   }
   if (teaser) copyFileSync(path.join(root,teaser),path.join(output,teaser));
 }

@@ -67,9 +67,8 @@
 
 ## Контакти та сповіщення
 
-- Для контактів у **Production** вкажи `SLX_CONTACT_EMAIL`, `SLX_INSTAGRAM_URL`, `SLX_TIKTOK_URL` та `SLX_TELEGRAM_URL`. Після зміни змінних потрібен новий деплой.
-- Щоб приймати заявки, підключи в **Production** `SLX_SUBSCRIBE_WEBHOOK` до HTTPS-адреси свого сервісу збору підписок. Функція Vercel передає JSON з полями `email`, `product`, `size` і `color`. Якщо сервіс потребує Bearer-токен, задай `SLX_SUBSCRIBE_TOKEN` у Vercel. Підтвердження підписки та надсилання листів налаштовуються в сервісі.
-- Phase 02 зберігає заявки в PostgreSQL. Якщо база недоступна, можна використовувати налаштований попередній вебхук. У браузері зберігаються лише локальний кошик і обране.
+- Для контакту після погодження вкажи `SLX_CONTACT_EMAIL`. Перевірені посилання соцмереж зберігай у `content/storefront.json`.
+- Заявки зберігаються у PostgreSQL. При недоступній базі форма повертає помилку. Для тестування скористайся [локальною адмінкою](ADMIN_GUIDE.md).
 
 ## Зображення
 
@@ -82,3 +81,6 @@
 Run `npm run preview:spreadshop` for the local pre-launch storefront. Add verified social URLs in `content/storefront.json`. Empty entries stay hidden. To add the official vertical teaser, place an MP4 or WebM in `assets/brand/` and set its repository-relative path in the same file. The section only renders when the file exists. Playback uses the native player with no autoplay.
 
 The Heavy DAngels cards use optimized copies of the supplied print files in `assets/collections/heavy-dangels/`. Each card links to the larger print and the existing product page. See [the Spreadshop runbook](SPREADSHOP.md) for launch and analytics gates.
+# Phase 7 guides
+
+[Architecture](ARCHITECTURE.md) · [Admin](ADMIN_GUIDE.md) · [Database](DATABASE_SETUP.md) · [Preview](BACKEND_PREVIEW.md) · [Email](EMAIL_SETUP.md) · [Analytics](ANALYTICS_GUIDE.md) · [Spreadshop](SPREADSHOP.md) · [Security](SECURITY.md) · [Deployment](DEPLOYMENT.md) · [Launch checklist](LAUNCH_CHECKLIST.md) · [Status](PROJECT_STATUS.md) · [Changelog](CHANGELOG.md)
