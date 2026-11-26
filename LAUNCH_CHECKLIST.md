@@ -14,7 +14,7 @@
 - [x] Prepare `migrate-preview` and verify that it refuses missing Preview credentials and a Preview connection that targets the production Supabase project.
 - [ ] Connect a dedicated Neon Free PostgreSQL project to Vercel Preview after verifying current enrollment eligibility. The two Supabase Free slots remain in service. [Phase 6 setup](BACKEND_PREVIEW.md)
 - [ ] Verify a real Notify Me submission and stored consent row on the isolated Vercel deployment. The public share link remains pinned to `de6602e`.
-- [x] Verify localhost signup with separate marketing consent, successful conversion event, and no email in the analytics event queue.
+- [x] Verify localhost signup with separate marketing consent and a successful conversion in GA4 DebugView. The event queue excludes email.
 - [ ] Review the production data retention policy and verified erasure contact before enabling signup. Confirm Preview has only dedicated test infrastructure credentials.
 - [ ] Before deploying the new form to production, run the additive database schema migration against the approved production database.
 - [ ] Verify delivery and unsubscribe on the approved sender before dispatching real notifications. Existing entries without a recorded opt-in remain stored and are excluded from product launch mail. Newsletter entries are stored separately from product requests. Newsletter broadcasting needs its own tested workflow.
@@ -29,7 +29,7 @@ Follow the [Preview runbook](BACKEND_PREVIEW.md) for migration and branch-scoped
 - [ ] Approve seller disclosures and partner responsibilities. Verify the legal contact, eligible owner, applicable return policy and customer support details.
 - [ ] With explicit launch approval, configure Spreadshop and deploy the isolated catalog frame. Set `SLX_FULFILLMENT=spreadshop` and the three documented Spreadshop release flags on the approved production project only. Verify the final deployment before opening sales. [Spreadshop runbook](SPREADSHOP.md)
 - [x] Verify all five SLX storefront events in GA4 DebugView through a connected localhost Tag Assistant session with consent.
-- [ ] Keep `SLX_GA_STREAM_READY` unset. Review the automatic `scroll` and outbound `click` events observed in DebugView and finish privacy validation before approval. Verify Spreadshop applies its own consent before enabling its Google tag. Treat checkout and cross-domain attribution as a separate verification.
+- [ ] Keep `SLX_GA_STREAM_READY` unset. Review `scroll`, outbound `click` and `form_start` observed in DebugView and finish privacy validation before approval. Verify Spreadshop applies its own consent before enabling its Google tag. Treat checkout and cross-domain attribution as a separate verification.
 
 ## Pre-launch release to production
 
