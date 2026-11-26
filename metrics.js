@@ -4,6 +4,7 @@
   window.slxMetric = event => {
     if (!stages.includes(event)) return;
     try {
+      if (localStorage.getItem('slx-analytics-consent-v1') !== 'granted') return;
       if (sessionStorage.getItem(`${key}-${event}`)) return;
       const totals = JSON.parse(localStorage.getItem(key) ?? '{}');
       totals[event] = (totals[event] ?? 0) + 1;
@@ -11,7 +12,10 @@
       sessionStorage.setItem(`${key}-${event}`, '1');
     } catch {}
   };
-  if (document.querySelector('.brand-hero')) window.slxMetric('landing_view');
+  if (document.querySelector('.brand-hero')) {
+    window.slxMetric('landing_view');
+    window.addEventListener('slx:analytics-consent',()=>window.slxMetric('landing_view'));
+  }
   document.addEventListener('click', event => {
     const action = event.target.closest('[data-metric]');
     if (action) window.slxMetric(action.dataset.metric);

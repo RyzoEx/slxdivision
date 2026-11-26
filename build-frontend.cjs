@@ -51,6 +51,14 @@ const settings = {
 };
 const liveSubscriptions = origin && process.env.SLX_SUBSCRIBE_WEBHOOK
   ? '<meta name="slx-subscription" content="live">' : '';
+const analyticsLive = vercelEnvironment === 'production' && origin === 'https://slxdivision.vercel.app'
+  && process.env.SLX_GA_STREAM_READY === '1';
+const analyticsDebug = !process.env.VERCEL && !vercelEnvironment && process.env.SLX_GA_DEBUG === '1';
+const analyticsMode = analyticsLive ? 'live' : analyticsDebug ? 'debug' : '';
+const analyticsScript = '<script src="/analytics.js" defer></script>';
+const campaignIds = (process.env.SLX_GA_CAMPAIGN_IDS ?? '').split(',').map(value=>value.trim());
+const analyticsTag = analyticsMode ? `<meta name="slx-analytics" content="${analyticsMode}">
+<meta name="slx-campaign-ids" content="${campaignIds.filter(value=>/^[a-z0-9][a-z0-9_-]{0,47}$/.test(value)).join(',')}">` : '';
 
 if (!localPages) {
   if (existsSync(output)) {
@@ -61,7 +69,7 @@ if (!localPages) {
     rmSync(output, { recursive: true });
   }
   mkdirSync(output);
-  for (const file of ['style.css', 'commerce.css', 'commerce-client.js', 'account.js', 'admin-ui.js', 'intro-start.js', 'metrics.js', 'experience.js', 'metrics.html', '404.html', 'storefront.js', 'catalog-ui.js']) {
+  for (const file of ['style.css', 'commerce.css', 'commerce-client.js', 'account.js', 'admin-ui.js', 'intro-start.js', 'metrics.js', 'experience.js', 'metrics.html', '404.html', 'storefront.js', 'catalog-ui.js', 'analytics.js']) {
     copyFileSync(path.join(root, file), path.join(output, file));
   }
   if (spreadshop?.frame) copyFileSync(path.join(root,'spreadshop','bridge.js'),path.join(output,'spreadshop-bridge.js'));
@@ -113,7 +121,8 @@ const homeCanonical = origin
   : '  <meta name="robots" content="noindex">\n';
 const home = readFileSync(path.join(root, 'index.html'), 'utf8')
   .replace(/  <!-- SEO origin start -->[\s\S]*?  <!-- SEO origin end -->/, () =>
-    `  <!-- SEO origin start -->\n${homeCanonical}  ${shareImage()}\n${fulfillmentMeta}\n${liveSubscriptions ? `  ${liveSubscriptions}\n` : ''}  <!-- SEO origin end -->`)
+    `  <!-- SEO origin start -->\n${homeCanonical}  ${shareImage()}\n${fulfillmentMeta}\n${analyticsTag}\n${liveSubscriptions ? `  ${liveSubscriptions}\n` : ''}  <!-- SEO origin end -->`)
+  .replace('</head>', `${analyticsScript}\n</head>`)
   .replace(/<!-- SITE HEADER START -->[\s\S]*?<!-- SITE HEADER END -->/, () => `<!-- SITE HEADER START -->\n${header(true)}\n<!-- SITE HEADER END -->`)
   .replace(/<!-- SITE FOOTER START -->[\s\S]*?<!-- SITE FOOTER END -->/, () => `<!-- SITE FOOTER START -->\n${footer(settings)}\n<!-- SITE FOOTER END -->`)
   .replace(/<!-- SITE INVENTORY START -->[\s\S]*?<!-- SITE INVENTORY END -->/, () => {
@@ -142,6 +151,7 @@ for (const [file, page] of Object.entries(pages)) {
 ${indexable ? `<link rel="canonical" href="${url(file)}">\n<meta property="og:url" content="${url(file)}">` : '<meta name="robots" content="noindex">'}
 ${liveSubscriptions}
 ${fulfillmentMeta}
+${page.analytics === false ? '' : analyticsTag}
 <meta property="og:type" content="website">
 <meta property="og:locale" content="uk_UA">
 <meta property="og:site_name" content="SLX Division">
@@ -150,6 +160,7 @@ ${fulfillmentMeta}
 ${shareImage(page.image)}
 ${indexable && breadcrumbs ? breadcrumbs : ''}
 <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="commerce.css"><link rel="icon" href="/assets/brand/favicon.png" sizes="96x96" type="image/png">
+${analyticsScript}
 <script src="catalog-index.js" defer></script><script src="commerce-client.js" defer></script><script src="metrics.js" defer></script><script src="storefront.js" defer></script><script src="catalog-ui.js" defer></script>
 ${page.script ? `<script src="${page.script}" defer></script>` : ''}
 ${file==='shop.html' && spreadshop?.frame ? '<script src="/spreadshop-bridge.js" defer></script>' : ''}

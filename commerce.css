@@ -76,3 +76,11 @@
   .spreadshop-status img { width:106px; justify-self:start; grid-row:1; }
 }
 @media(max-width:355px) { .header-actions .icon-button { width:28px; } }
+.cookie-panel { position: fixed; z-index: 8; inset-inline: var(--gutter); bottom: max(16px, env(safe-area-inset-bottom)); margin-inline: auto 0; width: min(480px, 100% - var(--gutter) * 2); padding: 18px; border: 1px solid #424242; background: #161616; box-shadow: 0 8px 24px #0008; }
+.cookie-panel h2 { font-size: 1.1rem; }
+.cookie-panel p { margin-block: 8px 12px; color: var(--muted); font-size: .875rem; }
+.cookie-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.cookie-actions .detail-link { font-size: .875rem; }
+.privacy-content { max-width: 72ch; }
+.privacy-content h2 { margin-block: 20px 8px; }
+.privacy-content p { color: var(--muted); margin-bottom: 12px; }

@@ -15,8 +15,20 @@ function lookbook(collections) {
 
 module.exports = ({ settings, catalog, spreadshop }) => ({
   'account.html': {
-    title: 'Мій кабінет', desc: 'Вхід та історія замовлень SLX.', noindex:true, script:'account.js',
+    title: 'Мій кабінет', desc: 'Вхід та історія замовлень SLX.', noindex:true, analytics:false, script:'account.js',
     content: '<section class="shell account-panel" id="slx-account"><p role="status">Завантажуємо кабінет…</p></section>',
+  },
+  'privacy.html': {
+    title:'Політика приватності',
+    desc:'Як SLX Division використовує дані, cookies та Google Analytics і як змінити свій вибір.',
+    content:`<section class="shell faq-section privacy-content">
+      <h2>Дані, які ви надаєте SLX</h2><p>Якщо ви звертаєтеся до нас, підписуєтеся на новини чи сповіщення про річ або користуєтеся кабінетом, SLX обробляє надані вами дані для відповіді, надсилання обраних сповіщень або роботи кабінету. Підписку можна скасувати за посиланням у листі. З питаннями щодо своїх даних звертайтеся через <a class="detail-link" href="contact.html">контакти SLX</a>.</p>
+      <h2>Необхідні cookies і локальне сховище</h2><p>Сайт зберігає вибір щодо аналітики в браузері. Функції входу, кошика й обраного можуть використовувати cookies або сховище браузера. Локальні лічильники SLX працюють лише за згодою на аналітику.</p>
+      <h2>Google Analytics 4</h2><p>Лише за вашою згодою Google Analytics вимірює відвідування публічних сторінок, перегляди виробів, переходи до Spreadshop і джерела переходів за мітками кампаній. Google отримує технічні дані браузера та ідентифікатори аналітичних cookies. Cookies SLX для GA4 зберігаються до 90 днів. SLX не надсилає в аналітику дані з форм, кабінету або замовлень, адресу електронної пошти, номер телефону чи ім’я покупця. Рекламну персоналізацію вимкнено.</p>
+      <p>Відхилити аналітику або відкликати згоду можна будь-коли через «Налаштування cookies». При відкликанні сайт припиняє надсилати нові події й видаляє доступні аналітичні cookies SLX. Докладніше про обробку даних Google — у <a class="detail-link" href="https://policies.google.com/privacy?hl=uk">політиці приватності Google</a>.</p>
+      <h2>Spreadshop</h2><p>На сайті Spreadshop діють його власні правила приватності та налаштування cookies. Вибір аналітики на SLX керує тегом SLX. Умови обробки даних під час оформлення покупки доступні на сайті Spreadshop.</p>
+      <button class="secondary" type="button" data-cookie-settings>Налаштування cookies</button>
+    </section>`,
   },
   'shop.html': {
     title: 'Shop', seoTitle:'Каталог вуличного одягу',

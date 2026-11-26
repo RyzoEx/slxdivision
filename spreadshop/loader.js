@@ -40,5 +40,10 @@
     clearTimeout(timeout);
     report('unavailable');
   },{once:true});
+  mount.addEventListener('click',event=>{
+    const link = event.target.closest('a[href]');
+    if (!link || link.origin !== shopPrefix || !link.href.startsWith('https:')) return;
+    window.parent.postMessage({type:'slx-spreadshop-click'},parentOrigin);
+  },true);
   document.head.append(script);
 })();

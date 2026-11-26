@@ -25,7 +25,12 @@
 
   const timeout = setTimeout(() => show('unavailable'),15000);
   window.addEventListener('message', event => {
-    if (event.origin !== origin || event.source !== frame.contentWindow || event.data?.type !== 'slx-spreadshop-state') return;
+    if (event.origin !== origin || event.source !== frame.contentWindow) return;
+    if (event.data?.type === 'slx-spreadshop-click' && !frame.hasAttribute('inert')) {
+      window.dispatchEvent(new Event('slx:spreadshop-click'));
+      return;
+    }
+    if (event.data?.type !== 'slx-spreadshop-state') return;
     const {state,height} = event.data;
     if (!['ready','inactive','unavailable'].includes(state)) return;
     if (!Number.isInteger(height) || height < 200 || height > 5000) return;

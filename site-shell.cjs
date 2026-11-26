@@ -11,6 +11,7 @@ const links = [
   ['Founders', 'founders.html'], ['Lookbook', 'lookbook.html'], ['Archive', 'archive.html'],
   ['Contact', 'contact.html'], ['FAQ', 'faq.html'],
   ['Оплата, доставка та повернення', 'payment-delivery-returns.html'],
+  ['Політика приватності', 'privacy.html'],
 ];
 const escape = value => String(value).replace(/[&<>"']/g, char => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -56,7 +57,7 @@ function footer(settings) {
       <div class="footer-social" aria-label="Контакти та соціальні мережі">${socialLinks(settings)}${email}</div>
       <div class="footer-subscribe"><p>Новини SLX</p><button class="primary" type="button" data-notify="newsletter">Підписатися</button></div>
     </div>
-    <div class="footer-bottom"><span>© SLX 2026</span><a href="#top">На початок</a></div>
+    <div class="footer-bottom"><span>© SLX 2026</span><button class="text-button" type="button" data-cookie-settings>Налаштування cookies</button><a href="#top">На початок</a></div>
   </div></footer>`;
 }
 
