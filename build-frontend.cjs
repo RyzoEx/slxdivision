@@ -42,7 +42,7 @@ if (address && (address.protocol !== 'https:' || address.username || address.pas
 const origin = address?.origin ?? '';
 const spreadshopEnabled = spreadshopPreview || usesSpreadshop(process.env)
   || (vercelEnvironment === 'production' && origin === 'https://slxdivision.vercel.app')
-  || (vercelEnvironment === 'preview' && process.env.VERCEL_GIT_COMMIT_REF === 'codex/spreadshop');
+  || (vercelEnvironment === 'preview' && ['codex/spreadshop','codex/backend-infrastructure'].includes(process.env.VERCEL_GIT_COMMIT_REF));
 const approved = vercelEnvironment==='production' && !preview && launchApproved(process.env);
 const spreadshop = spreadshopEnabled ? {
   preview:spreadshopPreview,

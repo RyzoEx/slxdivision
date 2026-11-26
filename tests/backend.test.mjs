@@ -76,6 +76,9 @@ test('Preview signup, roles and signed-in management use real database state',as
   assert.equal((await request('unsubscribe',{token:revoke})).status,200);
   const withdrawn=await (await request('admin-subscribers&consent=withdrawn',null,owner)).json();
   assert.equal(withdrawn.subscribers[0].id,subscriber.id);
+  await db.query('DELETE FROM slx_rate');
+  assert.equal((await request('interest',signup)).status,201);
+  assert.equal((await db.query('SELECT status FROM slx_interests WHERE id=$1',[subscriber.id])).rows[0].status,'unsubscribed');
   assert.equal((await request('admin-subscriber-delete',{id:subscriber.id},operator)).status,403);
   assert.equal((await request('unsubscribe',{token:revoke,erase:true})).status,200);
   assert.equal((await db.query('SELECT id FROM slx_interests')).rows.length,0);

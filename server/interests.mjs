@@ -18,12 +18,7 @@ export async function interest(db, data, ip) {
   } else requireThat(!size && !color,400,'Некоректний запит.');
   await db.query(`INSERT INTO slx_interests(id,email,product,size,color,unsubscribe_hash,delivery_key,status,consent_at,consent_version)
     VALUES ($1,$2,$3,$4,$5,$6,$7,'pending',now(),'2026-11-26')
-    ON CONFLICT(email,product,size,color) DO UPDATE SET
-      status=CASE WHEN slx_interests.status='unsubscribed' THEN 'pending' ELSE slx_interests.status END,
-      sent_at=CASE WHEN slx_interests.status='unsubscribed' THEN NULL ELSE slx_interests.sent_at END,
-      unsubscribe_hash=CASE WHEN slx_interests.status='unsubscribed' THEN EXCLUDED.unsubscribe_hash ELSE slx_interests.unsubscribe_hash END,
-      delivery_key=CASE WHEN slx_interests.status='unsubscribed' THEN EXCLUDED.delivery_key ELSE slx_interests.delivery_key END,
-      consent_at=EXCLUDED.consent_at,consent_version=EXCLUDED.consent_version`,[newId(),email,product,size,color,hashToken(token()),newId()]);
+    ON CONFLICT(email,product,size,color) DO NOTHING`,[newId(),email,product,size,color,hashToken(token()),newId()]);
 }
 
 export async function unsubscribe(db, value, erase = false) {
