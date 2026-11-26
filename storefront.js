@@ -31,6 +31,7 @@
         document.querySelector('[data-collection-description]').textContent = collection.description;
       }
     }
+    if (!social) return;
     for (const group of document.querySelectorAll('[data-social-links]')) {
       const links = Object.entries(social).filter(([,url])=>url).map(([name,href])=>{
         const link = element('a',{href,rel:'noopener noreferrer'},name);

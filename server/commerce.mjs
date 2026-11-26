@@ -47,6 +47,7 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
     const secure = !local || url.protocol === 'https:';
     try {
       if (op === 'catalog' && get && !db) return json({ready:false,sales:false,products:[]});
+      if (op === 'store-content' && get && !db) return json({collections:[],social:null});
       if (op==='telegram-cron') {
         requireThat(get && cronAuthorized(env,request.headers.get('authorization')),401,'Потрібна авторизація.');
         if (!db || !telegramReady(env)) return json({configured:false});
@@ -100,7 +101,8 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
         requireThat(mode==='test' || mode==='live',400,'Некоректний режим.');
       }
       if (op === 'admin-summary' && get) {
-        const [config,items,{rows},signups] = await Promise.all([settings(db),catalog(db),db.query('SELECT status,COUNT(*)::int AS count FROM slx_orders WHERE mode=$1 GROUP BY status',[mode]),manager(user) ? subscriberSummary(db) : null]);
+        const showSignups = manager(user) && (env.VERCEL_ENV!=='production' || mode==='live');
+        const [config,items,{rows},signups] = await Promise.all([settings(db),catalog(db),db.query('SELECT status,COUNT(*)::int AS count FROM slx_orders WHERE mode=$1 GROUP BY status',[mode]),showSignups ? subscriberSummary(db) : null]);
         return json({...adminMetadata(user,config,items,env,auth),counts:rows,products:items.length,signups});
       }
       if (op === 'admin-products' && get) {
@@ -132,6 +134,7 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
             analytics:env.VERCEL_ENV==='production' && env.SLX_GA_STREAM_READY==='1',
             previewSignup:env.VERCEL_ENV==='preview' && env.SLX_PREVIEW_SIGNUP==='1'});
         }
+        requireThat(env.VERCEL_ENV!=='production' || mode==='live',403,'Робочі підписники доступні в робочому режимі.');
         const csvExport=op==='admin-subscribers-csv';
         const result=await subscribers(db,url.searchParams,csvExport);
         return csvExport ? new Response(result,{headers:{...baseHeaders,'Content-Type':'text/csv; charset=utf-8',

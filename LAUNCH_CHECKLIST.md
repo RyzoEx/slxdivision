@@ -25,7 +25,8 @@ Follow the [Preview runbook](BACKEND_PREVIEW.md) for migration and branch-scoped
 - [ ] Approve the real assortment and final GBP prices, product quality, seller information, delivery and returns.
 - [ ] Verify the official widget, basket, checkout and support links end-to-end. Use the paid flow only after approval.
 - [ ] With explicit launch approval, configure Spreadshop and deploy the isolated catalog frame. Set `SLX_FULFILLMENT=spreadshop` and the three documented Spreadshop release flags on the approved production project only. Verify the final deployment before opening sales. [Spreadshop runbook](SPREADSHOP.md)
-- [ ] Keep `SLX_GA_STREAM_READY` unset until consent and privacy checks pass, Enhanced Measurement is reviewed, and DebugView shows events from the correct stream. Verify Spreadshop applies its own consent before enabling its Google tag. Treat checkout and cross-domain attribution as a separate verification.
+- [x] Verify all five SLX storefront events in GA4 DebugView through a connected localhost Tag Assistant session with consent.
+- [ ] Keep `SLX_GA_STREAM_READY` unset. Review the automatic `scroll` and outbound `click` events observed in DebugView and finish privacy validation before approval. Verify Spreadshop applies its own consent before enabling its Google tag. Treat checkout and cross-domain attribution as a separate verification.
 
 ## Pre-launch release to production
 

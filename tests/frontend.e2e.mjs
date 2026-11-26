@@ -100,12 +100,16 @@ test('browser verifies Preview signup, responsive management and local GA consen
   const events = await page.evaluate(()=>window.dataLayer.map(entry=>Array.from(entry)));
   assert.equal(deliveries,1);
   assert.deepEqual(events.filter(entry=>entry[0]==='consent').map(entry=>entry[2].analytics_storage),['denied','granted']);
-  for (const event of ['page_view','collection_view','artwork_view','social_click','teaser_play']) {
+  for (const event of ['collection_view','artwork_view','social_click','teaser_play']) {
     const emitted=events.filter(entry=>entry[0]==='event' && entry[1]===event);
     assert.equal(emitted.length,1,event);
     assert.equal(emitted[0][2].debug_mode,true);
   }
-  const pageView=events.find(entry=>entry[1]==='page_view')[2];
+  const pageConfig=events.filter(entry=>entry[0]==='config');
+  assert.equal(pageConfig.length,1);
+  assert.equal(events.filter(entry=>entry[0]==='event' && entry[1]==='page_view').length,0);
+  const pageView=pageConfig[0][2];
+  assert.equal(pageView.debug_mode,true);
   assert.match(pageView.page_location,/utm_source=instagram/);
   assert.doesNotMatch(JSON.stringify(events),/private@example.test/);
   await page.getByRole('button',{name:'Cookie settings'}).click();

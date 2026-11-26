@@ -34,6 +34,7 @@
   let tab = 'dashboard';
   let mode = 'test';
   let preview = false;
+  let subscriberAccess = false;
   let subscriberFilters = {};
   let loadNumber = 0;
   const unauthorized = error => { if (error.status===401) location.reload(); else message.textContent = error.message; };
@@ -433,9 +434,14 @@
   const views = {dashboard,subscribers,social,system,products,collections,orders,customers,manufacturing:data=>orders(data,true),partners,finance,referrals:circles,settings:configuration};
   function navigation() {
     const role = me.role;
-    const list = Object.keys(tabs).filter(id=>role==='owner' || (role==='manager' ? id!=='settings' : ['dashboard','orders','manufacturing'].includes(id)));
+    const list = Object.keys(tabs).filter(id=>(id!=='subscribers' || subscriberAccess || mode==='live')
+      && (role==='owner' || (role==='manager' ? id!=='settings' : ['dashboard','orders','manufacturing'].includes(id))));
     const modeSelect = choose('Режим','mode',[['test','Тестові дані'],['live','Робочі дані']],mode);
-    modeSelect.addEventListener('change',event=>{mode=event.target.value;message.textContent='';render();});
+    modeSelect.addEventListener('change',event=>{
+      mode=event.target.value;
+      if (tab==='subscribers' && !subscriberAccess && mode!=='live') tab='dashboard';
+      message.textContent='';render();
+    });
     nav.replaceChildren(h('div',{className:'ops-mode'},modeSelect,note(`${roles[role]} · ${me.email}`)),
       h('nav',{className:'ops-tabs',ariaLabel:'Модулі'},list.map(id=>{
         const button = h('button',{className:'secondary',type:'button'},tabs[id][0]);
@@ -454,6 +460,7 @@
         summaryData = await read('admin-summary');
         me = summaryData.user;
         preview = summaryData.preview;
+        subscriberAccess = Boolean(summaryData.signups);
         navigation();
       }
       const data = tab==='finance' ? null : tab==='dashboard' && summaryData ? summaryData
