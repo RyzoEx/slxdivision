@@ -17,8 +17,8 @@ function frameAssets(parentOrigin, preview) {
     html:`<!doctype html><html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="robots" content="noindex"><meta http-equiv="Content-Security-Policy" content="${policy}">
     <title>Каталог SLX · Spreadshop</title><link rel="stylesheet" href="/widget.css"><script defer src="/loader.js"></script></head>
-    <body><main id="spreadshop-mount" data-shop-id="${shop.id}" data-shop-prefix="${shop.prefix}" data-shop-script="${shop.script}"
-      data-shop-locale="${shop.locale}" data-parent-origin="${parentOrigin}"><p id="spreadshop-message" role="status">Завантажуємо каталог Spreadshop…</p></main>
+    <body><main><div id="spreadshop-mount" data-shop-id="${shop.id}" data-shop-prefix="${shop.prefix}" data-shop-script="${shop.script}"
+      data-shop-locale="${shop.locale}" data-parent-origin="${parentOrigin}"><p id="spreadshop-message" role="status">Завантажуємо каталог Spreadshop…</p></div></main>
     ${preview ? '<p class="widget-note">Локальне превʼю · Оформлення вимкнене</p>' : ''}</body></html>`,
   };
 }

@@ -289,14 +289,18 @@
       h('button',{type:'submit',className:'primary'},'Застосувати'),refresh,{refresh:false}),result];
   }
   function spreadshopFinance(data,refresh) {
-    const labels={credit:'Нарахована маржа',adjustment:'Коригування',payout:'Фактична виплата'};
+    const labels={credit:'Нарахована маржа',adjustment:'Коригування',payout:'Отримана виплата',expense:'Сплачені витрати SLX'};
+    const allocationLabels={net:'Отриманий прибуток після витрат',relocation:'Переїзд · 50%',development:'Розвиток SLX · 30%',reserve:'Резерв · 20%'};
     const format=(amount,currency)=>new Intl.NumberFormat('uk-UA',{style:'currency',currency}).format(Number(amount)/100);
     const currencies=data.byCurrency.map(({currency})=>[currency,currency]);
+    const metrics=(values,names,currency)=>h('dl',{className:'finance-grid'},Object.entries(names).map(([key,label])=>
+      h('div',{},h('dt',{},label),h('dd',{},format(values[key],currency)))));
     return card(heading('Фінанси Spreadshop'),
-      note('Записуйте фактичні нарахування й виплати за звітами Spreadshop. Валюти показано окремо.'),
+      note('Записуйте отримані виплати за банківськими виписками, а витрати — за документами SLX. Розподіл розраховується окремо для кожної валюти станом на кінець періоду.'),
       ...data.byCurrency.map(row=>h('section',{className:'ops-card'},heading(row.currency),
-        h('dl',{className:'finance-grid'},Object.entries({...labels,earned:'Маржа після коригувань'}).map(([key,label])=>
-          h('div',{},h('dt',{},label),h('dd',{},format(row[key],row.currency))))))),
+        metrics(row,{...labels,earned:'Маржа після коригувань',receivedNet:'Отримано після витрат за період'},row.currency),
+        h('h3',{},'Накопичувальний розподіл'),
+        metrics(row.allocation,allocationLabels,row.currency))),
       h('details',{},h('summary',{},'Додати запис'),form([
         choose('Тип','kind',Object.entries(labels),'credit'),
         choose('Валюта','currency',currencies,'GBP'),

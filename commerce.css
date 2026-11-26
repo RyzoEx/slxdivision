@@ -59,7 +59,7 @@
 .spreadshop-panel { margin-bottom:28px; padding:clamp(17px,3vw,34px); border:1px solid var(--line); background:#101010; }
 .spreadshop-intro { display:flex; flex-wrap:wrap; align-items:end; justify-content:space-between; gap:12px 22px; margin-bottom:18px; }
 .spreadshop-intro h2 { font-size:clamp(1.5rem,4vw,2.6rem); letter-spacing:-.06em; }
-.spreadshop-intro > p, .spreadshop-status { color:var(--muted); }
+.spreadshop-intro p, .spreadshop-status { color:var(--muted); }
 .spreadshop-currency { margin-bottom:8px; color:var(--muted); font:.8rem/1.4 "IBM Plex Mono",monospace; }
 .spreadshop-frame { display:block; width:100%; min-height:200px; border:0; border-top:1px solid var(--line); }
 @media(max-width:355px) { .header-actions .icon-button { width:28px; } }

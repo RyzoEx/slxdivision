@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS slx_telegram_outbox (
 );
 CREATE TABLE IF NOT EXISTS slx_spreadshop_entries (
   mode text NOT NULL CHECK(mode IN ('test','live')),
-  kind text NOT NULL CHECK(kind IN ('credit','adjustment','payout')),
+  kind text NOT NULL,
   currency text NOT NULL CHECK(currency IN ('GBP','EUR')),
   reference text NOT NULL,
   day date NOT NULL,
@@ -95,6 +95,9 @@ CREATE TABLE IF NOT EXISTS slx_spreadshop_entries (
   created_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY(mode,kind,currency,reference)
 );
+ALTER TABLE slx_spreadshop_entries DROP CONSTRAINT IF EXISTS slx_spreadshop_entries_kind_check;
+ALTER TABLE slx_spreadshop_entries ADD CONSTRAINT slx_spreadshop_entries_kind_check
+  CHECK(kind IN ('credit','adjustment','payout','expense'));
 CREATE INDEX IF NOT EXISTS slx_spreadshop_entries_day ON slx_spreadshop_entries(mode,day DESC);
 CREATE INDEX IF NOT EXISTS slx_orders_mode_created ON slx_orders(mode,created_at DESC);
 CREATE INDEX IF NOT EXISTS slx_orders_user ON slx_orders(user_id,mode);

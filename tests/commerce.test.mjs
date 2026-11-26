@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { memoryDatabase } from './commerce-db.mjs';
+import { migrate } from '../server/db.mjs';
 import { commerce } from '../server/commerce.mjs';
 import { newId, hashToken, createSession } from '../server/security.mjs';
 import { productsSource } from '../server/orders.mjs';
@@ -268,17 +269,38 @@ test('server-backed auth, protected admin, prelaunch, isolated order pipeline an
     assert.equal((await request('admin-spreadshop-entry',{cookie:managerCookie,body:{...statement,amount:999}})).status,409);
     assert.equal((await request('admin-spreadshop-entry',{cookie:ownerCookie,body:{...statement,kind:'adjustment',reference:'TEST-ADJUST',amount:-234}})).status,200);
     assert.equal((await request('admin-spreadshop-entry',{cookie:ownerCookie,body:{...statement,kind:'payout',currency:'EUR',reference:'TEST-PAYOUT',amount:900}})).status,200);
+    await db.exec(`ALTER TABLE slx_private.slx_spreadshop_entries DROP CONSTRAINT slx_spreadshop_entries_kind_check;
+      ALTER TABLE slx_private.slx_spreadshop_entries ADD CONSTRAINT slx_spreadshop_entries_kind_check
+      CHECK(kind IN ('credit','adjustment','payout'))`);
+    await migrate(db);
+    const expense={...statement,kind:'expense',currency:'EUR',reference:'TEST-EXPENSE',amount:199};
+    assert.equal((await request('admin-spreadshop-entry',{cookie:managerCookie,body:expense})).status,200);
+    assert.equal((await request('admin-spreadshop-entry',{cookie:managerCookie,body:expense})).status,200);
+    assert.equal((await request('admin-spreadshop-entry',{cookie:managerCookie,body:{...expense,reference:'TEST-NEGATIVE',amount:-199}})).status,400);
     const spreadReport=await (await request(`admin-finance&mode=test&from=${today}&to=${today}`,{cookie:managerCookie})).json();
     assert.equal(spreadReport.provider,'spreadshop');
     assert.deepEqual(spreadReport.byCurrency,[
-      {currency:'GBP',credit:1234,adjustment:-234,payout:0,earned:1000},
-      {currency:'EUR',credit:0,adjustment:0,payout:900,earned:0},
+      {currency:'GBP',credit:1234,adjustment:-234,payout:0,expense:0,earned:1000,receivedNet:0,
+        allocation:{net:0,relocation:0,development:0,reserve:0}},
+      {currency:'EUR',credit:0,adjustment:0,payout:900,expense:199,earned:0,receivedNet:701,
+        allocation:{net:701,relocation:350,development:210,reserve:141}},
     ]);
-    assert.equal(spreadReport.entries.length,3);
+    assert.equal(spreadReport.entries.length,4);
     const liveProvider=await (await request(`admin-finance&mode=live&from=${today}&to=${today}`,{cookie:managerCookie})).json();
     assert.equal(liveProvider.entries.length,0);
     const spreadCsv=await (await request(`admin-finance-csv&mode=test&from=${today}&to=${today}`,{cookie:managerCookie})).text();
     assert.match(spreadCsv,/credit,GBP,TEST-CREDIT-1,12\.34/);
+    assert.match(spreadCsv,/allocation_relocation,EUR,,3\.50/);
+    const nextDay=new Date(Date.parse(today)+86400000).toISOString().slice(0,10);
+    const nextReport=`admin-finance&mode=test&from=${nextDay}&to=${nextDay}`;
+    const balanceBefore=await (await request(nextReport,{cookie:managerCookie})).json();
+    assert.equal(balanceBefore.byCurrency[1].receivedNet,0);
+    assert.deepEqual(balanceBefore.byCurrency[1].allocation,spreadReport.byCurrency[1].allocation);
+    assert.equal((await request('admin-spreadshop-entry',{cookie:managerCookie,body:{
+      ...expense,reference:'TEST-EXPENSE-2',day:nextDay,amount:800,
+    }})).status,200);
+    const balanceAfter=await (await request(nextReport,{cookie:managerCookie})).json();
+    assert.deepEqual(balanceAfter.byCurrency[1].allocation,{net:-99,relocation:0,development:0,reserve:0});
     delete env.SLX_FULFILLMENT;
     assert.ok((await (await request('catalog')).json()).sales);
   } finally { await db.close(); }
