@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 const maxBody = 32 * 1024;
-const adminRoles = new Set(['owner', 'manager', 'operator']);
+export const staffRoles = Object.freeze(['owner','manager','operator','editor','analyst']);
+const adminRoles = new Set(staffRoles);
 
 export const hashToken = text => createHash('sha256').update(text).digest('hex');
 export const token = () => randomBytes(32).toString('base64url');

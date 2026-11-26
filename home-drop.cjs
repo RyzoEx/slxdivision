@@ -1,4 +1,5 @@
 const { escape, socialLinks } = require('./site-shell.cjs');
+const launchSignup = require('./signup-config.cjs');
 
 const artworkNames = new Map([
   ['blind-seraph-tee','Blind Seraph'], ['wirebound-skull-tee','Wirebound Skull'],
@@ -14,6 +15,7 @@ module.exports = ({catalog,settings,teaser,teaserPoster}) => {
         <h1 id="hero-title">HEAVY<br>DANGELS</h1>
         <p class="drop-summary">Four original prints from the first SLX Division drop.</p>
         <a class="primary" href="#collection-preview" data-metric="drop_click">Explore the collection <span aria-hidden="true">↓</span></a>
+        ${launchSignup ? '<button class="secondary" type="button" data-notify="newsletter">Get collection updates</button>' : ''}
       </div>
       <div class="drop-hero-mark"><img src="/assets/brand/logo.webp" width="1035" height="754" alt="" fetchpriority="high"></div>
     </div>

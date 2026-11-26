@@ -1,4 +1,4 @@
-import { authCookie, createSession, emailAddress, hashToken, isAdmin, requireThat, sessionToken, throttle } from './security.mjs';
+import { authCookie, createSession, emailAddress, hashToken, isAdmin, requireThat, sessionToken, staffRoles, throttle } from './security.mjs';
 import { audit, uuid } from './orders.mjs';
 
 function verified(identity, email) {
@@ -44,10 +44,10 @@ export async function logout(db, request, secure) {
 }
 export async function changeRole(db, actor, data) {
   requireThat(uuid(data.id) && data.id !== actor.id,400,'Власний доступ тут не змінюється.');
-  requireThat(['manager','operator'].includes(data.role) && typeof data.active === 'boolean',400,'Некоректний рівень доступу.');
+  requireThat(staffRoles.includes(data.role) && data.role!=='owner' && typeof data.active === 'boolean',400,'Некоректний рівень доступу.');
   return db.transaction(async tx => {
     const { rows } = await tx.query(`UPDATE slx_users SET role=$2,active=$3 WHERE id=$1
-      AND role IN ('manager','operator') RETURNING id,email,role,active`,[data.id,data.role,data.active]);
+      AND role IN ('manager','operator','editor','analyst') RETURNING id,email,role,active`,[data.id,data.role,data.active]);
     requireThat(rows[0],404,'Працівника не знайдено.');
     await tx.query('DELETE FROM slx_sessions WHERE user_id=$1',[data.id]);
     await audit(tx,actor,'staff.update',data.id);

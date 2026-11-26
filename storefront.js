@@ -261,6 +261,7 @@
       <label for="notify-email">Email</label><input id="notify-email" name="email" type="email" maxlength="180" autocomplete="email" required>
       <label hidden>Website <input name="website" tabindex="-1" autocomplete="off"></label>
       <label class="ops-check"><input type="checkbox" name="consent" required><span>I agree to receive these emails. <a class="detail-link" href="/privacy.html" target="_blank" rel="noopener">Privacy policy</a></span></label>
+      ${item ? '' : '<label class="ops-check"><input type="checkbox" name="marketing" required><span>I separately agree to receive SLX marketing and collection announcements.</span></label>'}
       <button class="primary" type="submit">Subscribe</button><p class="muted interest-note"></p><p role="status"></p>
     </form>`;
     const form = panel.querySelector('form');
@@ -278,12 +279,14 @@
     form.addEventListener('submit', async event => {
       event.preventDefault();
       const email = form.elements.email.value.trim().toLowerCase();
-      const record = { product, email, size, color, consent:form.elements.consent.checked, website:form.elements.website.value };
+      const record = { product, email, size, color, consent:form.elements.consent.checked,
+        marketing:form.elements.marketing?.checked===true, website:form.elements.website.value };
       button.disabled = true;
       try {
         const saved = await api('interest',{body:record});
         if (saved.ok !== true) throw new Error('The request could not be saved.');
         window.slxMetric?.(item ? 'product_notify_request' : 'newsletter_request');
+        document.dispatchEvent(new Event('slx:notify-success'));
         status.textContent = 'Request received.';
         form.reset();
       } catch (error) {

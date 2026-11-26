@@ -7,13 +7,23 @@ const config = require('./vercel.json');
 
 if (process.argv.includes('--fangor-preview')) throw new Error('The FANGOR preview is disabled.');
 const spreadshopPreview = process.argv.includes('--spreadshop-preview');
+const localAdmin = process.argv.includes('--local-admin');
 const localEnv = path.join(__dirname,'.env.local');
-if (!spreadshopPreview && existsSync(localEnv)) process.loadEnvFile(localEnv);
+if (!spreadshopPreview && !localAdmin && existsSync(localEnv)) process.loadEnvFile(localEnv);
 
 const output = path.join(__dirname, spreadshopPreview ? '.spreadshop-preview' : 'dist');
 const port = Number(process.env.PORT || (spreadshopPreview ? 4180 : 4173));
 const api = Promise.all([import('./server/commerce.mjs'),import('./server/db.mjs'),import('./server/preview-auth.mjs')])
-  .then(([{commerce},{previewDatabase},{previewAuth}])=>{
+  .then(async ([{commerce},{previewDatabase},{previewAuth,provisionPreviewStaff}])=>{
+    if (localAdmin) {
+      const {embeddedDatabase}=await import('./server/local-db.mjs');
+      const db=await embeddedDatabase(path.join(__dirname,'.slx-local-db'));
+      if (process.env.SLX_LOCAL_ADMIN_PASSWORD) {
+        await provisionPreviewStaff(db,'owner@slx.test','owner',process.env.SLX_LOCAL_ADMIN_PASSWORD);
+        delete process.env.SLX_LOCAL_ADMIN_PASSWORD;
+      }
+      return commerce({db,auth:previewAuth(db),local:true,env:{VERCEL_ENV:'preview',SLX_PREVIEW_SIGNUP:'1'}});
+    }
     const db = spreadshopPreview ? null : previewDatabase();
     return commerce({db,auth:previewAuth(db),local:true,env:{...process.env,VERCEL_ENV:'preview',
       ...(spreadshopPreview ? {SLX_FULFILLMENT:'spreadshop'} : {})}});

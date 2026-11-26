@@ -1,6 +1,6 @@
 import { openPostgres, previewDatabase, migrate } from './db.mjs';
 import { provisionPreviewStaff } from './preview-auth.mjs';
-import { emailAddress } from './security.mjs';
+import { emailAddress, staffRoles } from './security.mjs';
 import { uuid } from './orders.mjs';
 import { supabaseConfig, supabaseServerHeaders } from './supabase.mjs';
 
@@ -16,7 +16,7 @@ try {
   } else if (action==='migrate' || preview) {
     await migrate(db);
     console.log(preview ? 'SLX Preview database schema ready.' : 'SLX private database schema ready.');
-  } else if (action==='staff' && uuid(id) && ['owner','manager','operator'].includes(role)) {
+  } else if (action==='staff' && uuid(id) && staffRoles.includes(role)) {
     const expected = emailAddress(email);
     const { secret:key, address:host } = supabaseConfig();
     if (!key || !host) throw new Error('Supabase URL and server secret key are required for account verification.');

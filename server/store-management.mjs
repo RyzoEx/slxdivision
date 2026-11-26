@@ -56,15 +56,19 @@ export async function updateCollection(db,user,data) {
 }
 
 export async function subscriberSummary(db) {
-  const [total,designs,activity] = await Promise.all([
-    db.query(`SELECT COUNT(DISTINCT email) FILTER(WHERE product='newsletter')::int AS subscribers,
-      COUNT(*) FILTER(WHERE product<>'newsletter')::int AS requests FROM slx_interests WHERE consent_at IS NOT NULL AND status<>'unsubscribed'`),
+  const [total,designs,activity,daily] = await Promise.all([
+    db.query(`SELECT COUNT(DISTINCT email) FILTER(WHERE product='newsletter' AND marketing_at IS NOT NULL AND status<>'unsubscribed')::int AS subscribers,
+      COUNT(*) FILTER(WHERE product<>'newsletter' AND consent_at IS NOT NULL AND status<>'unsubscribed')::int AS requests,
+      COUNT(*) FILTER(WHERE status='unsubscribed')::int AS withdrawn FROM slx_interests`),
     db.query(`SELECT product,COUNT(*)::int AS count FROM slx_interests
       WHERE product<>'newsletter' AND consent_at IS NOT NULL AND status<>'unsubscribed' GROUP BY product ORDER BY count DESC,product LIMIT 12`),
-    db.query(`SELECT action,created_at FROM slx_audit WHERE action IN ('admin.login','collection.update','social.update','interest.delete','interest.dispatch')
+    db.query(`SELECT action,created_at FROM slx_audit WHERE action IN ('admin.login','collection.update','social.update','interest.delete','interest.dispatch','editorial.save')
       ORDER BY created_at DESC,id DESC LIMIT 12`),
+    db.query(`WITH days AS (SELECT (current_date-i)::date AS day FROM generate_series(0,13) AS i)
+      SELECT day::text AS day,COUNT(id)::int AS count FROM days LEFT JOIN slx_interests
+      ON (created_at AT TIME ZONE 'UTC')::date=day AND consent_at IS NOT NULL GROUP BY day ORDER BY day`),
   ]);
-  return {...total.rows[0],designs:designs.rows.map(row=>({...row,name:productsSource.find(item=>item.id===row.product)?.name ?? row.product})),activity:activity.rows};
+  return {...total.rows[0],designs:designs.rows.map(row=>({...row,name:productsSource.find(item=>item.id===row.product)?.name ?? row.product})),activity:activity.rows,daily:daily.rows};
 }
 
 const csvCell = value => {
@@ -78,18 +82,25 @@ export async function subscribers(db,params,download=false) {
   const scope = params.get('scope') || 'all';
   const query = text(params.get('q') ?? '',180).toLowerCase();
   const page = Number(params.get('page') ?? 1);
+  const from=params.get('from') || null, to=params.get('to') || null, design=params.get('design') || '';
+  const oldest=params.get('sort')==='oldest';
+  const date=value=>!value || (/^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0,10)===value);
   requireThat(['all','active','withdrawn','legacy'].includes(status) && ['all','newsletter','product'].includes(scope)
-    && Number.isInteger(page) && page>0 && page<=20000,400,'Перевірте фільтри.');
+    && Number.isInteger(page) && page>0 && page<=20000 && date(from) && date(to) && (!from || !to || from<=to)
+    && (!design || productsSource.some(item=>item.id===design)),400,'Перевірте фільтри.');
   const limit = download ? 10001 : 51;
-  const {rows} = await db.query(`SELECT id,email,product,size,color,created_at,consent_at,consent_version,status FROM slx_interests
+  const {rows} = await db.query(`SELECT id,email,product,size,color,created_at,consent_at,consent_version,status,marketing_at,withdrawn_at FROM slx_interests
     WHERE ($1='' OR strpos(email,$1)>0)
       AND ($2='all' OR ($2='newsletter' AND product='newsletter') OR ($2='product' AND product<>'newsletter'))
       AND ($3='all' OR ($3='active' AND consent_at IS NOT NULL AND status<>'unsubscribed')
         OR ($3='withdrawn' AND status='unsubscribed') OR ($3='legacy' AND consent_at IS NULL AND status<>'unsubscribed'))
-    ORDER BY created_at DESC,id DESC LIMIT $4 OFFSET $5`,[query,scope,status,limit,download?0:(page-1)*50]);
-  if (!download) return {subscribers:rows.slice(0,50),page,more:rows.length===51};
+      AND ($6::date IS NULL OR created_at >= ($6::date::timestamp AT TIME ZONE 'UTC'))
+      AND ($7::date IS NULL OR created_at < (($7::date+1)::timestamp AT TIME ZONE 'UTC')) AND ($8='' OR product=$8)
+    ORDER BY created_at ${oldest?'ASC':'DESC'},id ${oldest?'ASC':'DESC'} LIMIT $4 OFFSET $5`,[query,scope,status,limit,download?0:(page-1)*50,from,to,design]);
+  if (!download) return {subscribers:rows.slice(0,50),page,more:rows.length===51,
+    designs:productsSource.map(({id,name})=>({id,name}))};
   requireThat(rows.length<=10000,413,'Звузьте фільтри, щоб експортувати до 10 000 записів.');
-  const columns = ['email','product','size','color','created_at','consent_at','consent_version','status'];
+  const columns = ['email','product','size','color','created_at','consent_at','consent_version','marketing_at','withdrawn_at','status'];
   return [columns.join(','),...rows.map(row=>columns.map(key=>csvCell(row[key])).join(','))].join('\r\n')+'\r\n';
 }
 

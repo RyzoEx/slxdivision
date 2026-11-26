@@ -138,6 +138,7 @@
   document.addEventListener('slx:artwork-view',event=>{
     send('artwork_view',{artwork_id:event.target.dataset.artwork});
   });
+  document.addEventListener('slx:notify-success',()=>send('notify_me_conversion'));
   const playedTeasers = new WeakSet();
   document.addEventListener('play',event=>{
     const video = event.target;

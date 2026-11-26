@@ -18,6 +18,8 @@ function json(data, status = 200, headers = {}) {
   return Response.json(data,{status,headers:{...baseHeaders,...headers}});
 }
 const manager = user => user && ['owner','manager'].includes(user.role);
+const editor = user => manager(user) || user?.role==='editor';
+const editorialRoutes = new Set(['admin-summary','admin-system','admin-collections','admin-collection','admin-social','admin-content','admin-content-save','admin-media','admin-media-validate']);
 const imageKey = /^[a-f0-9-]{36}\.(png|jpg|webp)$/;
 const fileTypes = {
   png: { mime:'image/png', check:b=>b.subarray(0,8).equals(Buffer.from('89504e470d0a1a0a','hex')) },
@@ -99,9 +101,11 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       if (op?.startsWith('admin-')) {
         requireThat(isAdmin(user),user ? 403 : 401,'Потрібен адміністративний доступ.');
         requireThat(mode==='test' || mode==='live',400,'Некоректний режим.');
+        if (user.role==='editor') requireThat(editorialRoutes.has(op),403,'Недостатньо прав.');
+        if (user.role==='analyst') requireThat(get && ['admin-summary','admin-system'].includes(op),403,'Недостатньо прав.');
       }
       if (op === 'admin-summary' && get) {
-        const showSignups = manager(user) && (env.VERCEL_ENV!=='production' || mode==='live');
+        const showSignups = (manager(user) || user.role==='analyst') && (env.VERCEL_ENV!=='production' || mode==='live');
         const [config,items,{rows},signups] = await Promise.all([settings(db),catalog(db),db.query('SELECT status,COUNT(*)::int AS count FROM slx_orders WHERE mode=$1 GROUP BY status',[mode]),showSignups ? subscriberSummary(db) : null]);
         return json({...adminMetadata(user,config,items,env,auth),counts:rows,products:items.length,signups});
       }
@@ -120,20 +124,26 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
         return json(await funds(db,mode,await settings(db)));
       }
       if (op === 'admin-collections' && get) {
-        requireThat(manager(user),403,'Недостатньо прав.');
+        requireThat(editor(user),403,'Недостатньо прав.');
         return json({collections:await collectionSettings(db)});
       }
       if (['admin-subscribers','admin-subscribers-csv','admin-social','admin-system'].includes(op) && get) {
-        requireThat(manager(user),403,'Недостатньо прав.');
-        if (op==='admin-social') return json({social:await socialSettings(db)});
+        if (op==='admin-social') {
+          requireThat(editor(user),403,'Недостатньо прав.');
+          return json({social:await socialSettings(db)});
+        }
         if (op==='admin-system') {
+          requireThat(editor(user) || user.role==='analyst',403,'Недостатньо прав.');
           const started=performance.now();
           await db.query('SELECT 1 FROM slx_interests LIMIT 1');
-          return json({database:'connected',latencyMs:Math.round(performance.now()-started),
+          return json({backend:'ok',database:'connected',latencyMs:Math.round(performance.now()-started),
+            version:'7.0.0',commit:/^[a-f0-9]{7,40}$/.test(env.VERCEL_GIT_COMMIT_SHA ?? '') ? env.VERCEL_GIT_COMMIT_SHA : null,
+            checkedAt:new Date().toISOString(),email:launchMailReady(env)?'configured':'off',
             environment:env.VERCEL_ENV ?? 'local',spreadshop:env.VERCEL_ENV==='production' && spreadshop.launchApproved(env),
             analytics:env.VERCEL_ENV==='production' && env.SLX_GA_STREAM_READY==='1',
             previewSignup:env.VERCEL_ENV==='preview' && env.SLX_PREVIEW_SIGNUP==='1'});
         }
+        requireThat(manager(user),403,'Недостатньо прав.');
         requireThat(env.VERCEL_ENV!=='production' || mode==='live',403,'Робочі підписники доступні в робочому режимі.');
         const csvExport=op==='admin-subscribers-csv';
         const result=await subscribers(db,url.searchParams,csvExport);
@@ -244,11 +254,11 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
         return json(await setProduct(db,user,data,env));
       }
       if (op==='admin-collection') {
-        requireThat(manager(user) && (mode==='live' || env.VERCEL_ENV==='preview'),403,'Колекції редагуються лише в робочому режимі.');
+        requireThat(editor(user) && (mode==='live' || env.VERCEL_ENV==='preview'),403,'Колекції редагуються лише в робочому режимі.');
         return json(await updateCollection(db,user,data));
       }
       if (op==='admin-social') {
-        requireThat(manager(user) && (mode==='live' || env.VERCEL_ENV==='preview'),403,'Недостатньо прав.');
+        requireThat(editor(user) && (mode==='live' || env.VERCEL_ENV==='preview'),403,'Недостатньо прав.');
         return json({social:await updateSocial(db,user,data)});
       }
       if (op==='admin-subscriber-delete') {

@@ -111,6 +111,7 @@ function inventoryPages({ collections, products }, {spreadshop} = {}) {
       searchImages: [...(collection.cover ? [collection.cover] : []), ...entries.flatMap(item => item.photos.slice(0,2))],
       trail: collectionTrail(collection),
       content: `<div data-collection-event="${collection.id}" data-collection-page></div><p class="shell collection-description" data-collection-description>${escape(collection.description ?? '')}</p>
+        ${launchSignup ? '<p class="shell"><button class="secondary" type="button" data-notify="newsletter">Get collection updates</button></p>' : ''}
         ${collection.cover ? `<div class="shell collection-cover">${photo(collection.cover, 'eager')}</div>` : ''}
         ${grid(entries, { tools: true, archived: collection.archived })}`,
     };

@@ -14,6 +14,9 @@ CREATE TABLE IF NOT EXISTS slx_sessions (
   user_id uuid NOT NULL REFERENCES slx_users(id) ON DELETE CASCADE,
   expires_at timestamptz NOT NULL
 );
+ALTER TABLE slx_users DROP CONSTRAINT IF EXISTS slx_users_role_check;
+ALTER TABLE slx_users ADD CONSTRAINT slx_users_role_check
+  CHECK (role IN ('owner','manager','operator','editor','analyst','customer'));
 CREATE TABLE IF NOT EXISTS slx_preview_credentials (
   user_id uuid PRIMARY KEY REFERENCES slx_users(id) ON DELETE CASCADE,
   salt text NOT NULL,
@@ -41,6 +44,14 @@ CREATE TABLE IF NOT EXISTS slx_store_content (
   id integer PRIMARY KEY CHECK (id=1), data jsonb NOT NULL
 );
 ALTER TABLE slx_store_content ENABLE ROW LEVEL SECURITY;
+CREATE TABLE IF NOT EXISTS slx_editorial_drafts (
+  kind text NOT NULL CHECK(kind IN ('website','collection','product')),
+  subject text NOT NULL,
+  data jsonb NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY(kind,subject)
+);
+ALTER TABLE slx_editorial_drafts ENABLE ROW LEVEL SECURITY;
 CREATE TABLE IF NOT EXISTS slx_manufacturers (
   id uuid PRIMARY KEY, data jsonb NOT NULL
 );
@@ -138,6 +149,9 @@ CREATE TABLE IF NOT EXISTS slx_interests (
 ALTER TABLE slx_interests ADD COLUMN IF NOT EXISTS delivery_key uuid;
 ALTER TABLE slx_interests ADD COLUMN IF NOT EXISTS consent_at timestamptz;
 ALTER TABLE slx_interests ADD COLUMN IF NOT EXISTS consent_version text;
+ALTER TABLE slx_interests ADD COLUMN IF NOT EXISTS marketing_at timestamptz;
+ALTER TABLE slx_interests ADD COLUMN IF NOT EXISTS withdrawn_at timestamptz;
+CREATE INDEX IF NOT EXISTS slx_interests_created ON slx_interests(created_at DESC,id DESC);
 UPDATE slx_interests SET delivery_key=id WHERE delivery_key IS NULL;
 ALTER TABLE slx_interests ALTER COLUMN delivery_key SET NOT NULL;
 CREATE TABLE IF NOT EXISTS slx_audit (

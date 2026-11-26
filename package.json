@@ -8,6 +8,7 @@
     "test:e2e": "node --test tests/frontend.e2e.mjs",
     "build": "node build-frontend.cjs",
     "preview": "npm run build && node serve-preview.cjs",
+    "preview:admin": "node build-frontend.cjs --local-admin && node serve-preview.cjs --local-admin",
     "preview:spreadshop": "node build-frontend.cjs --spreadshop-preview && node serve-preview.cjs --spreadshop-preview"
   },
   "dependencies": {

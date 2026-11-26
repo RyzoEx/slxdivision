@@ -16,15 +16,16 @@ export async function interest(db, data, ip) {
     const item = (await catalog(db)).find(row => row.id === product && row.status === 'coming-soon');
     requireThat(item && (!size || item.sizes.includes(size)) && (!color || item.colors.includes(color)),400,'Перевірте річ, розмір і колір.');
   } else requireThat(!size && !color,400,'Некоректний запит.');
-  await db.query(`INSERT INTO slx_interests(id,email,product,size,color,unsubscribe_hash,delivery_key,status,consent_at,consent_version)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,'pending',now(),'2026-11-26')
-    ON CONFLICT(email,product,size,color) DO NOTHING`,[newId(),email,product,size,color,hashToken(token()),newId()]);
+  requireThat(product!=='newsletter' || data.marketing===true,400,'Потрібна окрема згода на новини.');
+  await db.query(`INSERT INTO slx_interests(id,email,product,size,color,unsubscribe_hash,delivery_key,status,consent_at,consent_version,marketing_at)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,'pending',now(),'2026-11-26',CASE WHEN $8 THEN now() END)
+    ON CONFLICT(email,product,size,color) DO NOTHING`,[newId(),email,product,size,color,hashToken(token()),newId(),product==='newsletter']);
 }
 
 export async function unsubscribe(db, value, erase = false) {
   requireThat(typeof value === 'string' && /^[A-Za-z0-9_-]{43}$/.test(value),400,'Некоректне посилання.');
   await db.query(erase ? 'DELETE FROM slx_interests WHERE unsubscribe_hash=$1'
-    : "UPDATE slx_interests SET status='unsubscribed' WHERE unsubscribe_hash=$1",[hashToken(value)]);
+    : "UPDATE slx_interests SET status='unsubscribed',withdrawn_at=COALESCE(withdrawn_at,now()) WHERE unsubscribe_hash=$1",[hashToken(value)]);
 }
 
 export async function notifyLaunch(db, actor, product, env, origin, fetcher = fetch) {

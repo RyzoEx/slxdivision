@@ -50,7 +50,7 @@ const spreadshop = spreadshopEnabled ? {
     : spreadshopPreview && process.env.SLX_SPREADSHOP_PREVIEW_CATALOG==='1' ? 'http://localhost:4181/' : null,
 } : null;
 const fulfillmentMeta = spreadshop ? '<meta name="slx-fulfillment" content="spreadshop">' : '';
-const previewSignupMeta = vercelEnvironment==='preview' && require('./signup-config.cjs') ? '<meta name="slx-test-signup">' : '';
+const previewSignupMeta = require('./signup-config.cjs') ? '<meta name="slx-test-signup">' : '';
 const writePage = (name, body) => writeFileSync(path.join(output, name), body);
 const email = process.env.SLX_CONTACT_EMAIL ?? '';
 const settings = {

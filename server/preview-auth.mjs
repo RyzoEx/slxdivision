@@ -1,13 +1,13 @@
 import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
-import { emailAddress, newId, requireThat } from './security.mjs';
+import { emailAddress, newId, requireThat, staffRoles } from './security.mjs';
 
 const derive = promisify(scrypt);
 const params = {N:65536,r:8,p:1,maxmem:96*1024*1024};
 
 export async function provisionPreviewStaff(db, address, role, password) {
   const email = emailAddress(address);
-  requireThat(['owner','manager','operator'].includes(role),400,'Choose a staff role.');
+  requireThat(staffRoles.includes(role),400,'Choose a staff role.');
   requireThat(typeof password === 'string' && password.length >= 20 && password.length <= 128,400,'Set a unique 20–128 character Preview password.');
   const salt = randomBytes(32).toString('hex');
   const hash = (await derive(password,salt,32,params)).toString('hex');
