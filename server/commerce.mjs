@@ -155,7 +155,7 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
 
       requireThat(request.method==='POST',404,'Маршрут не знайдено.');
       requireThat(request.headers.get('origin')===origin,403,'Запит має надходити із сайту SLX.');
-      const data = await readJson(request,op==='admin-upload' ? 2000000 : undefined);
+      const data = await readJson(request,op==='admin-upload' ? 2000000 : op==='interest' ? 2048 : undefined);
       const ip = request.headers.get('x-vercel-forwarded-for')?.split(',')[0]?.slice(0,80) || 'local';
       if (op==='login') return json({ok:true},200,{'Set-Cookie':await login(db,auth,data,ip,secure)});
       if (op==='otp' || op==='verify') {

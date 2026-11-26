@@ -181,7 +181,16 @@ test('server-backed auth, protected admin, prelaunch, isolated order pipeline an
     assert.doesNotMatch(await exportResult.text(),/example.test/);
     assert.equal((await request('admin-staff&mode=live',{cookie:ownerCookie,body:{id:operator.id,role:'operator',active:false}})).status,200);
     assert.equal((await request('admin-orders',{cookie:operatorCookie})).status,401);
-    assert.equal((await request('interest',{body:{email:customer.email,product:item,size:'',color:''}})).status,201);
+    const signup={email:customer.email,product:item,size:'',color:'',consent:true};
+    assert.equal((await request('interest',{body:{...signup,consent:false}})).status,400);
+    assert.equal((await request('interest',{body:{...signup,website:'bot'}})).status,400);
+    assert.equal((await db.query('SELECT count(*)::int AS count FROM slx_interests')).rows[0].count,0);
+    assert.equal((await request('interest',{body:signup})).status,201);
+    assert.equal((await request('interest',{body:signup})).status,201);
+    const interests=(await db.query('SELECT email,consent_at,consent_version FROM slx_interests')).rows;
+    assert.equal(interests.length,1);
+    assert.equal(interests[0].email,customer.email);
+    assert.ok(interests[0].consent_at && interests[0].consent_version);
     assert.equal((await request('admin-product&mode=test',{cookie:ownerCookie,body:{id:item}})).status,403);
     Object.assign(env,{
       VERCEL_ENV:'production', SLX_ALLOW_LIVE_ORDERS:'1', SLX_SUPABASE_URL:'https://auth.example.test',

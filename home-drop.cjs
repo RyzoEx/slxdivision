@@ -5,7 +5,7 @@ const artworkNames = new Map([
   ['chrome-oni-tee','Chrome Oni'], ['red-eclipse-oni-tee','Red Eclipse Oni'],
 ]);
 
-module.exports = ({catalog,settings,teaser}) => {
+module.exports = ({catalog,settings,teaser,teaserPoster}) => {
   const pieces = catalog.activeProducts.filter(item=>artworkNames.has(item.id) && item.artwork);
   return `<section class="drop-hero" aria-labelledby="hero-title">
     <div class="shell drop-hero-inner">
@@ -33,9 +33,15 @@ module.exports = ({catalog,settings,teaser}) => {
       </article>`;
     }).join('')}</div>
   </section>
-  ${teaser ? `<section class="shell drop-teaser"><h2>DROP 001 Teaser</h2>
-    <video width="540" height="960" controls playsinline preload="none" aria-label="SLX Division drop teaser" data-teaser-play="heavy-dangels"><source src="/${escape(teaser)}" type="${teaser.endsWith('.webm') ? 'video/webm' : 'video/mp4'}"></video>
-    <p>Press play to start the teaser. Use the player to control sound.</p></section>` : ''}
+  ${teaser ? `<section class="shell drop-teaser" aria-labelledby="teaser-title">
+    <div><h2 id="teaser-title">DROP 001 Teaser</h2><p>Heavy DAngels</p></div>
+    <div class="teaser-media">
+      <video width="720" height="1280" playsinline preload="none" aria-label="Heavy DAngels teaser" data-teaser-play="heavy-dangels"
+        data-src="/${escape(teaser)}"${teaserPoster ? ` poster="/${escape(teaserPoster)}"` : ''}></video>
+      <button class="primary teaser-launch" type="button" data-play-teaser><span aria-hidden="true">▶</span> Play teaser with sound</button>
+      <p class="teaser-status" role="status"></p>
+      <noscript><a class="detail-link" href="/${escape(teaser)}">Open teaser</a></noscript>
+    </div></section>` : ''}
   <section class="shell drop-about" aria-labelledby="drop-about-title">
     <h2 id="drop-about-title">About SLX Division</h2><div><p>SLX Division is an independent Ukrainian streetwear label drawn to underground Y2K, old record sleeves and the sharp linework of cyber sigilism.</p><a class="detail-link" href="about.html">About the brand <span aria-hidden="true">↗</span></a></div>
   </section>

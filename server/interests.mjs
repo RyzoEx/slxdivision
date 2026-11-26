@@ -4,6 +4,8 @@ import { catalog, audit } from './orders.mjs';
 import { launchMail, launchMailReady } from './launch-mail.mjs';
 
 export async function interest(db, data, ip) {
+  requireThat(data.consent === true && (data.website === undefined || data.website === ''),
+    400,'Consent is required to receive emails.');
   const email = emailAddress(data.email);
   await throttle(db,`interest-ip:${ip}`,30,15);
   await throttle(db,`interest-email:${email}`,8,15);
@@ -14,11 +16,14 @@ export async function interest(db, data, ip) {
     const item = (await catalog(db)).find(row => row.id === product && row.status === 'coming-soon');
     requireThat(item && (!size || item.sizes.includes(size)) && (!color || item.colors.includes(color)),400,'Перевірте річ, розмір і колір.');
   } else requireThat(!size && !color,400,'Некоректний запит.');
-  await db.query(`INSERT INTO slx_interests(id,email,product,size,color,unsubscribe_hash,delivery_key,status)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,'pending')
-    ON CONFLICT(email,product,size,color) DO UPDATE SET status='pending',sent_at=NULL,
-      unsubscribe_hash=EXCLUDED.unsubscribe_hash,delivery_key=EXCLUDED.delivery_key
-    WHERE slx_interests.status='unsubscribed'`,[newId(),email,product,size,color,hashToken(token()),newId()]);
+  await db.query(`INSERT INTO slx_interests(id,email,product,size,color,unsubscribe_hash,delivery_key,status,consent_at,consent_version)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,'pending',now(),'2026-11-26')
+    ON CONFLICT(email,product,size,color) DO UPDATE SET
+      status=CASE WHEN slx_interests.status='unsubscribed' THEN 'pending' ELSE slx_interests.status END,
+      sent_at=CASE WHEN slx_interests.status='unsubscribed' THEN NULL ELSE slx_interests.sent_at END,
+      unsubscribe_hash=CASE WHEN slx_interests.status='unsubscribed' THEN EXCLUDED.unsubscribe_hash ELSE slx_interests.unsubscribe_hash END,
+      delivery_key=CASE WHEN slx_interests.status='unsubscribed' THEN EXCLUDED.delivery_key ELSE slx_interests.delivery_key END,
+      consent_at=EXCLUDED.consent_at,consent_version=EXCLUDED.consent_version`,[newId(),email,product,size,color,hashToken(token()),newId()]);
 }
 
 export async function unsubscribe(db, value) {
@@ -33,7 +38,7 @@ export async function notifyLaunch(db, actor, product, env, origin, fetcher = fe
   requireThat(item,409,'Річ має бути доступною перед сповіщенням.');
   const result = {sent:0, failed:0};
   const claims = (await db.query(`UPDATE slx_interests SET status='sending',sent_at=now()
-    WHERE id IN (SELECT id FROM slx_interests WHERE product=$1 AND
+    WHERE id IN (SELECT id FROM slx_interests WHERE product=$1 AND consent_at IS NOT NULL AND
       (status='pending' OR (status='sending' AND sent_at<now()-interval '10 minutes'))
       ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 8) RETURNING id,email,size,color,delivery_key`,[product])).rows;
   await Promise.all(claims.map(async row => {

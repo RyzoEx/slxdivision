@@ -4,6 +4,30 @@
   dialog.setAttribute('aria-labelledby','artwork-dialog-title');
   dialog.innerHTML = '<div class="artwork-dialog-bar"><h2 id="artwork-dialog-title"></h2><button class="secondary" type="button" autofocus>Close</button></div><img alt="">';
   document.body.append(dialog);
+  const teaser = document.querySelector('[data-teaser-play]');
+  const launch = document.querySelector('[data-play-teaser]');
+  if (teaser && launch) {
+    const status = document.querySelector('.teaser-status');
+    teaser.addEventListener('error',()=>{
+      status.textContent = 'Could not load the teaser. Try again.';
+      launch.hidden = false;
+      launch.disabled = false;
+    });
+    launch.addEventListener('click',()=>{
+      launch.disabled = true;
+      status.textContent = '';
+      teaser.controls = true;
+      teaser.src = teaser.dataset.src;
+      teaser.play().then(()=>{
+        teaser.tabIndex = 0;
+        teaser.focus({preventScroll:true});
+        launch.hidden = true;
+      }).catch(()=>{
+        launch.disabled = false;
+        status.textContent = 'Playback could not start. Try the player controls.';
+      });
+    });
+  }
   const image = dialog.querySelector('img');
   let opener;
   dialog.querySelector('button').addEventListener('click',()=>dialog.close());

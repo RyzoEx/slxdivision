@@ -11,6 +11,7 @@ const { shop, usesSpreadshop, launchApproved } = require('./spreadshop/config.cj
 const homeDrop = require('./home-drop.cjs');
 const storefrontSettings = require('./content/storefront.json');
 const { transformSync } = require('esbuild');
+const separateStyles = ['style.css','commerce.css','drop.css'];
 
 const root = realpathSync(__dirname);
 let catalog;
@@ -25,6 +26,9 @@ if (process.argv.includes('--fangor-preview')) throw new Error('The FANGOR previ
 if (spreadshopPreview && (localPages || process.env.VERCEL)) throw new Error('Spreadshop preview is local only.');
 const folder = spreadshopPreview ? '.spreadshop-preview' : 'dist';
 const output = localPages ? root : path.join(root,folder);
+const storefrontStyles = localPages
+  ? separateStyles.map(file=>`<link rel="stylesheet" href="/${file}">`).join('')
+  : '<link rel="stylesheet" href="/site.css">';
 const vercelEnvironment = process.env.VERCEL_ENV;
 const vercelHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
 const preview = localPages || spreadshopPreview || (vercelEnvironment && vercelEnvironment !== 'production');
@@ -36,7 +40,8 @@ if (address && (address.protocol !== 'https:' || address.username || address.pas
   throw new Error('SLX_SITE_URL must be an HTTPS origin without a path, credentials, query, or fragment.');
 }
 const origin = address?.origin ?? '';
-const spreadshopEnabled = spreadshopPreview || usesSpreadshop(process.env);
+const spreadshopEnabled = spreadshopPreview || usesSpreadshop(process.env)
+  || (vercelEnvironment === 'preview' && process.env.VERCEL_GIT_COMMIT_REF === 'codex/spreadshop');
 const approved = vercelEnvironment==='production' && !preview && launchApproved(process.env);
 const spreadshop = spreadshopEnabled ? {
   preview:spreadshopPreview,
@@ -55,8 +60,11 @@ if (teaserPath && !/^assets\/brand\/[a-z0-9][a-z0-9_-]*\.(mp4|webm)$/.test(tease
   throw new Error('Use an MP4 or WebM path inside assets/brand for the teaser.');
 }
 const teaser = teaserPath && existsSync(path.join(root,teaserPath)) ? teaserPath : '';
-const liveSubscriptions = origin && process.env.SLX_SUBSCRIBE_WEBHOOK
-  ? '<meta name="slx-subscription" content="live">' : '';
+const posterPath = storefrontSettings.teaserPoster;
+if (posterPath && !/^assets\/brand\/[a-z0-9][a-z0-9_-]*\.(webp|png|jpg)$/.test(posterPath)) {
+  throw new Error('Use a WebP, PNG or JPG path inside assets/brand for the teaser poster.');
+}
+const teaserPoster = posterPath && existsSync(path.join(root,posterPath)) ? posterPath : '';
 const analyticsLive = vercelEnvironment === 'production' && origin === 'https://slxdivision.vercel.app'
   && process.env.SLX_GA_STREAM_READY === '1';
 const analyticsDebug = !process.env.VERCEL && !vercelEnvironment && process.env.SLX_GA_DEBUG === '1';
@@ -81,6 +89,8 @@ if (!localPages) {
     if (loader === 'html') copyFileSync(source,path.join(output,file));
     else writePage(file,transformSync(readFileSync(source,'utf8'),{loader,minify:true,legalComments:'none'}).code);
   }
+  const combined = separateStyles.map(file=>readFileSync(path.join(root,file),'utf8')).join('\n');
+  writePage('site.css',transformSync(combined,{loader:'css',minify:true,legalComments:'none'}).code);
   if (spreadshop?.frame) copyFileSync(path.join(root,'spreadshop','bridge.js'),path.join(output,'spreadshop-bridge.js'));
   if (origin) {
     for (const file of readdirSync(root, { withFileTypes:true })) {
@@ -133,12 +143,14 @@ const homeCanonical = origin
   ] })}\n`
   : '  <meta name="robots" content="noindex">\n';
 const home = readFileSync(path.join(root, 'index.html'), 'utf8')
+  .replace(/  <link rel="stylesheet" href="style.css">\s*<link rel="stylesheet" href="commerce.css">\s*<link rel="stylesheet" href="drop.css">/,
+    storefrontStyles)
   .replace(/  <!-- SEO origin start -->[\s\S]*?  <!-- SEO origin end -->/, () =>
-    `  <!-- SEO origin start -->\n${homeCanonical}  ${shareImage()}\n${fulfillmentMeta}\n${analyticsTag}\n${liveSubscriptions ? `  ${liveSubscriptions}\n` : ''}  <!-- SEO origin end -->`)
+    `  <!-- SEO origin start -->\n${homeCanonical}  ${shareImage()}\n${fulfillmentMeta}\n${analyticsTag}\n  <!-- SEO origin end -->`)
   .replace('</head>', `${analyticsScript}\n</head>`)
   .replace(/<!-- SITE HEADER START -->[\s\S]*?<!-- SITE HEADER END -->/, () => `<!-- SITE HEADER START -->\n${header(true)}\n<!-- SITE HEADER END -->`)
   .replace(/<!-- SITE FOOTER START -->[\s\S]*?<!-- SITE FOOTER END -->/, () => `<!-- SITE FOOTER START -->\n${footer(settings)}\n<!-- SITE FOOTER END -->`)
-  .replace(/<main>[\s\S]*?<\/main>/, () => `<main>\n${homeDrop({catalog,settings,teaser})}\n</main>`);
+  .replace(/<main>[\s\S]*?<\/main>/, () => `<main>\n${homeDrop({catalog,settings,teaser,teaserPoster})}\n</main>`);
 writePage('index.html', home);
 
 const pages = { ...editorial({ settings, catalog, spreadshop }), ...inventoryPages(catalog,{spreadshop}) };
@@ -157,7 +169,6 @@ for (const [file, page] of Object.entries(pages)) {
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escape(title)}</title><meta name="description" content="${escape(page.desc)}">
 ${indexable ? `<link rel="canonical" href="${url(file)}">\n<meta property="og:url" content="${url(file)}">` : '<meta name="robots" content="noindex">'}
-${liveSubscriptions}
 ${fulfillmentMeta}
 ${page.analytics === false ? '' : analyticsTag}
 <meta property="og:type" content="website">
@@ -167,7 +178,7 @@ ${page.analytics === false ? '' : analyticsTag}
 <meta property="og:description" content="${escape(page.desc)}">
 ${shareImage(page.image)}
 ${indexable && breadcrumbs ? breadcrumbs : ''}
-<link rel="stylesheet" href="style.css"><link rel="stylesheet" href="commerce.css"><link rel="stylesheet" href="drop.css"><link rel="icon" href="/assets/brand/favicon.png" sizes="96x96" type="image/png">
+${storefrontStyles}<link rel="icon" href="/assets/brand/favicon.png" sizes="96x96" type="image/png">
 ${analyticsScript}
 <script src="catalog-index.js" defer></script><script src="commerce-client.js" defer></script><script src="metrics.js" defer></script><script src="storefront.js" defer></script><script src="catalog-ui.js" defer></script>
 ${page.script ? `<script src="${page.script}" defer></script>` : ''}

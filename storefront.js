@@ -227,8 +227,12 @@
     const size = variants?.querySelector('[data-variant="size"]')?.value ?? '';
     const color = variants?.querySelector('[data-variant="color"]')?.value ?? '';
     const panel = open('newsletter', item ? 'Notify me at launch' : 'SLX updates', trigger);
-    const redirectToLegacy = document.querySelector('meta[name="slx-subscription"]')?.content === 'live';
-    panel.innerHTML = '<form class="interest-form"><label for="notify-email">Email</label><input id="notify-email" name="email" type="email" maxlength="200" autocomplete="email" required><button class="primary" type="submit">Subscribe</button><p class="muted interest-note"></p><p role="status"></p></form>';
+    panel.innerHTML = `<form class="interest-form">
+      <label for="notify-email">Email</label><input id="notify-email" name="email" type="email" maxlength="180" autocomplete="email" required>
+      <label hidden>Website <input name="website" tabindex="-1" autocomplete="off"></label>
+      <label class="ops-check"><input type="checkbox" name="consent" required><span>I agree to receive these emails. <a class="detail-link" href="/privacy.html" target="_blank" rel="noopener">Privacy policy</a></span></label>
+      <button class="primary" type="submit">Subscribe</button><p class="muted interest-note"></p><p role="status"></p>
+    </form>`;
     const form = panel.querySelector('form');
     const button = form.querySelector('button');
     const status = form.querySelector('[role="status"]');
@@ -243,21 +247,19 @@
     form.addEventListener('submit', async event => {
       event.preventDefault();
       const email = form.elements.email.value.trim().toLowerCase();
-      const record = { product, email, size, color };
+      const record = { product, email, size, color, consent:form.elements.consent.checked, website:form.elements.website.value };
       button.disabled = true;
       try {
-        try { await api('interest',{body:record}); }
-        catch (error) {
-          if (error.status !== 503 || !redirectToLegacy) throw error;
-          const response = await fetch('/api/subscribe', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(record),
-          });
-          if (!response.ok) throw error;
-        }
+        const saved = await api('interest',{body:record});
+        if (saved.ok !== true) throw new Error('The request could not be saved.');
         window.slxMetric?.(item ? 'product_notify_request' : 'newsletter_request');
         status.textContent = 'Request received.';
         form.reset();
-      } catch (error) { status.textContent = error.message; }
+      } catch (error) {
+        status.textContent = error.status === 429 ? 'Too many attempts. Try again later.'
+          : error.status === 400 ? 'Check your email, selection and consent.'
+          : 'Sign-up could not be saved. Please try again later.';
+      }
       finally { button.disabled = false; }
     });
     form.elements.email.focus();

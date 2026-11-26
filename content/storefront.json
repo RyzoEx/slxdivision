@@ -1,10 +1,11 @@
 {
   "social": {
     "YouTube": "https://www.youtube.com/@SLXDivision",
-    "Pinterest": "",
-    "TikTok": "",
+    "Pinterest": "https://www.pinterest.com/slxshop/",
+    "TikTok": "https://www.tiktok.com/@slxshop_",
     "Instagram": "",
     "Telegram": ""
   },
-  "teaser": ""
+  "teaser": "assets/brand/heavy-dangels-teaser.mp4",
+  "teaserPoster": "assets/brand/heavy-dangels-teaser-poster.webp"
 }

@@ -126,6 +126,8 @@ CREATE TABLE IF NOT EXISTS slx_interests (
   UNIQUE(email,product,size,color)
 );
 ALTER TABLE slx_interests ADD COLUMN IF NOT EXISTS delivery_key uuid;
+ALTER TABLE slx_interests ADD COLUMN IF NOT EXISTS consent_at timestamptz;
+ALTER TABLE slx_interests ADD COLUMN IF NOT EXISTS consent_version text;
 UPDATE slx_interests SET delivery_key=id WHERE delivery_key IS NULL;
 ALTER TABLE slx_interests ALTER COLUMN delivery_key SET NOT NULL;
 CREATE TABLE IF NOT EXISTS slx_audit (
