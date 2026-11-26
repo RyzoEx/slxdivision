@@ -1,5 +1,6 @@
 const { shop } = require('./config.cjs');
 const { escape } = require('../site-shell.cjs');
+const { launchSignup } = require('../content/storefront.json');
 
 function storefront({preview=false,frame=null}) {
   const sandbox = preview ? 'allow-scripts allow-same-origin'
@@ -14,8 +15,8 @@ function storefront({preview=false,frame=null}) {
       <div class="spreadshop-status" data-spreadshop-status>
         <div>
           <h3 lang="en" data-spreadshop-heading>COMING SOON</h3>
-          <p role="status" data-spreadshop-message>${frame ? 'Loading the Spreadshop catalog…' : 'Sales have yet to open. Get notified when the catalog launches.'}</p>
-          <button class="primary" type="button" data-notify="newsletter">Notify me at launch</button>
+          <p role="status" data-spreadshop-message>${frame ? 'Loading the Spreadshop catalog…' : 'Sales have yet to open.'}</p>
+          ${launchSignup ? '<button class="primary" type="button" data-notify="newsletter">Notify me at launch</button>' : ''}
         </div>
         <img src="assets/brand/logo.webp" width="1035" height="754" alt="">
       </div>

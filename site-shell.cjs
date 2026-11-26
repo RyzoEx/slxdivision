@@ -1,3 +1,5 @@
+const { launchSignup } = require('./content/storefront.json');
+
 const icon = (path) => `<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.45" aria-hidden="true">${path}</svg>`;
 const icons = {
   menu: icon('<path d="M3 8h18M3 16h18"/>'),
@@ -55,15 +57,15 @@ function footer(settings) {
       <p>Independent Ukrainian streetwear.</p></div>
       <nav aria-label="Site links">${navLinks(links)}</nav>
       <div class="footer-social" aria-label="Contact and social media">${socialLinks(settings)}${email}</div>
-      <div class="footer-subscribe"><p>SLX updates</p><button class="primary" type="button" data-notify="newsletter">Subscribe</button></div>
+      ${launchSignup ? '<div class="footer-subscribe"><p>SLX updates</p><button class="primary" type="button" data-notify="newsletter">Subscribe</button></div>' : ''}
     </div>
     <div class="footer-bottom"><span>© SLX 2026</span><button class="text-button" type="button" data-cookie-settings>Cookie settings</button><a href="#top">Back to top</a></div>
   </div></footer>`;
 }
 
 const faq = [
-  ['When does the drop launch?', 'A launch date has yet to be announced. Subscribe in the footer for updates.'],
-  ['Can I order now?', 'During pre-launch, you can sign up for updates on each product page.'],
+  ['When does the drop launch?', `A launch date has yet to be announced.${launchSignup ? ' Subscribe in the footer for updates.' : ''}`],
+  ['Can I order now?', `Orders will open after pre-launch.${launchSignup ? ' You can sign up for updates on each product page.' : ''}`],
   ['What does made to order mean?', 'Production starts after order confirmation. Size, price and timing are confirmed before payment.'],
   ['When is a deposit due?', 'There is no charge for submitting a request. After confirmation, a deposit starts production and the balance is payable on delivery.'],
   ['What are the shipping and return terms?', 'For direct orders, we plan to use Nova Poshta. Final shipping and return terms will be published before sales open.'],

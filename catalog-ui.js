@@ -48,7 +48,8 @@
         add.hidden = item.status === 'sold-out';
         add.textContent = sales && item.status === 'available' ? 'Add to cart' : 'Save to shopping list';
       }
-      container.querySelector('[data-notify]').hidden = item.status !== 'coming-soon';
+      const notify = container.querySelector('[data-notify]');
+      if (notify) notify.hidden = item.status !== 'coming-soon';
     }
   });
   for (const section of document.querySelectorAll('.inventory')) {

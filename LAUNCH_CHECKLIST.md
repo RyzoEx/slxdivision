@@ -9,6 +9,7 @@
 
 ## Notify Me
 
+- [x] Hide product and newsletter signup controls for the pre-launch release with `launchSignup: false` in `content/storefront.json`. Re-enable after the target database has been migrated and real persistence verified in Preview.
 - [x] Verify persistence, consent timestamp and policy version, rejection of missing consent and spam, and deduplication in local PostgreSQL integration tests.
 - [x] Prepare `migrate-preview` and verify that it refuses missing Preview credentials and a Preview connection that targets the production Supabase project.
 - [ ] Connect separate Supabase Free PostgreSQL to Vercel Preview. Supabase blocked project creation because both active Free slots were in use across the account’s organizations. Resume when an authorized owner confirms a free slot is available. The linked production project and unrelated projects stay in service.
@@ -25,6 +26,12 @@ To resume Preview setup, keep the existing `SLX_DATABASE_URL` in the local ignor
 - [ ] Verify the official widget, basket, checkout and support links end-to-end. Use the paid flow only after approval.
 - [ ] With explicit launch approval, configure Spreadshop and deploy the isolated catalog frame. Set `SLX_FULFILLMENT=spreadshop` and the three documented Spreadshop release flags on the approved production project only. Verify the final deployment before opening sales. [Spreadshop runbook](SPREADSHOP.md)
 - [ ] Keep `SLX_GA_STREAM_READY` unset until consent and privacy checks pass, Enhanced Measurement is reviewed, and DebugView shows events from the correct stream. Verify Spreadshop applies its own consent before enabling its Google tag. Treat checkout and cross-domain attribution as a separate verification.
+
+## Pre-launch release to production
+
+- [ ] Wait for explicit approval before merging `codex/spreadshop` into `main`. Vercel tracks `main` for `slxdivision.vercel.app`.
+- [ ] Keep direct order/payment, Spreadshop activation and GA4 flags unset. The pre-launch store can show the Spreadshop placeholder without loading the catalog frame.
+- [ ] Once Vercel reports the approved deployment Ready, check COMING SOON, the collection and product pages, the missing signup controls, and the absence of a checkout, Spreadshop frame and Google tag.
 
 ## Rollback
 

@@ -41,6 +41,7 @@ if (address && (address.protocol !== 'https:' || address.username || address.pas
 }
 const origin = address?.origin ?? '';
 const spreadshopEnabled = spreadshopPreview || usesSpreadshop(process.env)
+  || (vercelEnvironment === 'production' && origin === 'https://slxdivision.vercel.app')
   || (vercelEnvironment === 'preview' && process.env.VERCEL_GIT_COMMIT_REF === 'codex/spreadshop');
 const approved = vercelEnvironment==='production' && !preview && launchApproved(process.env);
 const spreadshop = spreadshopEnabled ? {

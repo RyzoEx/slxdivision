@@ -19,7 +19,7 @@
     heading.lang = inactive ? 'en' : 'en';
     heading.textContent = inactive ? 'COMING SOON' : 'Catalog temporarily unavailable';
     message.textContent = inactive
-      ? 'Sales have yet to open. Get notified when the catalog launches.'
+      ? 'Sales have yet to open.'
       : 'Explore the SLX artwork below or try again later.';
   }
 

@@ -1,4 +1,5 @@
 const { escape } = require('./site-shell.cjs');
+const { launchSignup } = require('./content/storefront.json');
 
 const status = {
   'coming-soon': 'Coming soon',
@@ -74,7 +75,7 @@ function productPage(item, collection, related, spreadshop) {
             ${item.sizes?.length ? `<label>Size <select data-variant="size">${options(item.sizes, 'Select a size')}</select></label>` : ''}
             ${item.colors?.length ? `<label>Color <select data-variant="color">${options(item.colors, 'Select a color')}</select></label>` : ''}
           </div>
-          <button class="primary" type="button" data-notify="${item.id}" ${item.status === 'sold-out' ? 'hidden' : ''}>Notify me at launch</button>
+          ${launchSignup ? `<button class="primary" type="button" data-notify="${item.id}" ${item.status === 'sold-out' ? 'hidden' : ''}>Notify me at launch</button>` : ''}
           ${spreadshop ? '<a class="secondary" href="shop.html#spreadshop">Spreadshop catalog</a>'
             : `<button class="secondary" type="button" data-cart-add="${item.id}" ${item.status === 'sold-out' ? 'hidden' : ''}>Save to shopping list</button>`}
           <button class="text-button" type="button" data-favorite="${item.id}" aria-pressed="false">Save to favorites</button>

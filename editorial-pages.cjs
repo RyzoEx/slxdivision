@@ -1,4 +1,5 @@
 const { faqList, socialLinks, escape } = require('./site-shell.cjs');
+const { launchSignup } = require('./content/storefront.json');
 const { grid, collectionsPage } = require('./inventory-pages.cjs');
 const { storefront } = require('./spreadshop/storefront.cjs');
 const empty = (text = 'No items yet.') =>
@@ -66,8 +67,8 @@ module.exports = ({ settings, catalog, spreadshop }) => ({
       : empty('The archive is empty for now.'),
   },
   'contact.html': {
-    title: 'Contact', desc: 'Contact SLX and sign up for brand updates.',
-    content: `<section class="shell story-grid"><article><h2>Contact SLX</h2><p>${settings.email ? `<a href="mailto:${escape(settings.email)}">${escape(settings.email)}</a>` : 'Contact details will be added before launch.'}</p><div class="footer-social">${socialLinks(settings)}</div></article><article><h2>Updates from SLX</h2><button class="primary" type="button" data-notify="newsletter">Subscribe</button></article></section>`,
+    title: 'Contact', desc: launchSignup ? 'Contact SLX and sign up for brand updates.' : 'Find official SLX Division contact and social channels.',
+    content: `<section class="shell story-grid"><article><h2>Contact SLX</h2><p>${settings.email ? `<a href="mailto:${escape(settings.email)}">${escape(settings.email)}</a>` : 'Contact details will be added before launch.'}</p><div class="footer-social">${socialLinks(settings)}</div></article>${launchSignup ? '<article><h2>Updates from SLX</h2><button class="primary" type="button" data-notify="newsletter">Subscribe</button></article>' : ''}</section>`,
   },
   'faq.html': {
     title: 'FAQ', seoTitle:'Frequently asked questions',
@@ -81,7 +82,7 @@ module.exports = ({ settings, catalog, spreadshop }) => ({
     desc: spreadshop ? 'Payment, shipping and returns for items sold through Spreadshop.' : 'How SLX plans to confirm direct orders, collect deposits, ship via Nova Poshta, and handle returns.',
     content: spreadshop ? `<div class="shell story-grid"><article id="made-to-order"><h2>Production and payment</h2><p>SLX creates the designs. Spreadshop produces its catalog items to order and takes payment. Catalog prices are in British pounds (GBP).</p><a class="detail-link" href="shop.html#spreadshop">Catalog on Spreadshop</a></article>
       <article><h2>Shipping and returns</h2><p>Spreadshop handles shipping and returns. Available destinations, costs and delivery estimates are shown at checkout. To change or return an order, contact support using your order email and include your order number.</p></article></div>`
-      : `<p class="shell collection-description">SLX is preparing to launch. We will publish confirmed prices, timing and terms before sales open. You can register for updates on each product page.</p>
+      : `<p class="shell collection-description">SLX is preparing to launch. We will publish confirmed prices, timing and terms before sales open.${launchSignup ? ' You can register for updates on each product page.' : ''}</p>
     <div class="shell story-grid">
       <article id="made-to-order"><h2>How it works</h2><p>Choose a piece and size and submit a request. SLX checks availability, price and timing. Production starts after confirmation and a deposit.</p></article>
       <article id="payment"><h2>Payment</h2><p>There is no charge when you submit a request. We confirm the total, deposit and amount due on delivery before payment.</p></article>
