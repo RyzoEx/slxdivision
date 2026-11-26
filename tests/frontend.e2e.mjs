@@ -13,7 +13,7 @@ test('browser verifies Preview signup, responsive management and local GA consen
   const previewEnv={VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_REF:'codex/backend-infrastructure',SLX_PREVIEW_SIGNUP:'1'};
   const cleanEnv={...process.env};
   for (const key of Object.keys(cleanEnv)) if (/^(SLX_|VERCEL)/.test(key)) delete cleanEnv[key];
-  const build=env=>execFileSync(process.execPath,['build-frontend.cjs'],{env:{...cleanEnv,...env}});
+  const build=(env,args=[])=>execFileSync(process.execPath,['build-frontend.cjs',...args],{env:{...cleanEnv,...env}});
   build(previewEnv);
   const db=await memoryDatabase();
   t.after(()=>db.close());
@@ -66,11 +66,24 @@ test('browser verifies Preview signup, responsive management and local GA consen
   await page.getByRole('button',{name:'Увійти'}).click();
   await page.getByText('Попит за дизайнами').waitFor();
   if (output) await page.screenshot({path:resolve(output,'slx-admin-desktop.png'),fullPage:true});
+  for (const [slug,label] of [['overview','Огляд'],['subscribers','Підписники'],['collections','Колекції'],['designs','Дизайни'],
+    ['website','Вебсайт'],['media','Медіатека'],['email','Листи'],['social','Соцмережі'],['system','Система']]) {
+    for (const width of [1440,390]) {
+      await page.setViewportSize({width,height:920});
+      await page.getByRole('button',{name:label,exact:true}).click();
+      await page.getByRole('heading',{name:label,exact:true}).first().waitFor();
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),width);
+      if (output) await page.screenshot({path:resolve(output,`${slug}-${width}.png`),fullPage:true});
+    }
+  }
   await page.setViewportSize({width:390,height:844});
   await page.getByRole('button',{name:'Підписники',exact:true}).click();
   await page.getByText('e2e-preview@example.test').waitFor();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),390);
   if (output) await page.screenshot({path:resolve(output,'slx-admin-mobile.png'),fullPage:true});
+  await page.getByText('Видалити…',{exact:true}).click();
+  await page.keyboard.press('Escape');
+  await page.getByText('e2e-preview@example.test').waitFor();
   await page.getByText('Видалити…',{exact:true}).click();
   await page.getByRole('button',{name:'Підтвердити видалення'}).click();
   await page.getByText('Записів за цими фільтрами немає.').waitFor();
@@ -80,7 +93,7 @@ test('browser verifies Preview signup, responsive management and local GA consen
   await page.getByLabel('Пароль').waitFor();
   assert.equal((await page.request.get(`${origin}/api/commerce?op=admin-subscribers`)).status(),401);
 
-  build({SLX_GA_DEBUG:'1'});
+  build({SLX_GA_DEBUG:'1'},['--local-admin']);
   let deliveries=0;
   await page.route('https://www.googletagmanager.com/**',route=>{deliveries++;return route.fulfill({body:'',contentType:'text/javascript'});});
   await page.route('https://www.youtube.com/**',route=>route.abort());
@@ -89,6 +102,17 @@ test('browser verifies Preview signup, responsive management and local GA consen
   assert.equal(deliveries,0);
   await page.getByRole('button',{name:'Cookie settings'}).click();
   await page.getByRole('button',{name:'Allow',exact:true}).click();
+  for (const width of [360,390,768,1024,1440,1920]) {
+    await page.setViewportSize({width,height:840});
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),width);
+  }
+  await page.getByRole('button',{name:'Get collection updates',exact:true}).click();
+  await page.getByRole('dialog').getByLabel('Email',{exact:true}).fill('phase7-news@example.test');
+  await page.getByRole('dialog').getByRole('checkbox').first().check();
+  await page.getByRole('dialog').getByRole('checkbox').last().check();
+  await page.getByRole('dialog').getByRole('button',{name:'Subscribe',exact:true}).click();
+  await page.getByText('Request received.').waitFor();
+  await page.keyboard.press('Escape');
   await page.getByRole('heading',{name:'Collection Preview'}).scrollIntoViewIfNeeded();
   await page.getByRole('link',{name:'Enlarge Blind Seraph artwork'}).click();
   await page.keyboard.press('Escape');
@@ -100,7 +124,7 @@ test('browser verifies Preview signup, responsive management and local GA consen
   const events = await page.evaluate(()=>window.dataLayer.map(entry=>Array.from(entry)));
   assert.equal(deliveries,1);
   assert.deepEqual(events.filter(entry=>entry[0]==='consent').map(entry=>entry[2].analytics_storage),['denied','granted']);
-  for (const event of ['collection_view','artwork_view','social_click','teaser_play']) {
+  for (const event of ['collection_view','artwork_view','social_click','teaser_play','notify_me_conversion']) {
     const emitted=events.filter(entry=>entry[0]==='event' && entry[1]===event);
     assert.equal(emitted.length,1,event);
     assert.equal(emitted[0][2].debug_mode,true);
@@ -111,7 +135,7 @@ test('browser verifies Preview signup, responsive management and local GA consen
   const pageView=pageConfig[0][2];
   assert.equal(pageView.debug_mode,true);
   assert.match(pageView.page_location,/utm_source=instagram/);
-  assert.doesNotMatch(JSON.stringify(events),/private@example.test/);
+  assert.doesNotMatch(JSON.stringify(events),/private@example.test|phase7-news@example.test/);
   await page.getByRole('button',{name:'Cookie settings'}).click();
   await page.getByRole('button',{name:'Reject',exact:true}).click();
   await page.waitForFunction(()=>!window.dataLayer && localStorage.getItem('slx-analytics-consent-v1')==='denied');

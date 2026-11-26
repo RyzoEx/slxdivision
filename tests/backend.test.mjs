@@ -1,7 +1,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {memoryDatabase} from './commerce-db.mjs';
-import {databaseTarget,previewDatabase} from '../server/db.mjs';
+import {databaseTarget,previewDatabase,migrate} from '../server/db.mjs';
+import {readFile} from 'node:fs/promises';
 import {commerce} from '../server/commerce.mjs';
 import {previewAuth,provisionPreviewStaff} from '../server/preview-auth.mjs';
 import {emailAddress,hashToken,token} from '../server/security.mjs';
@@ -31,6 +32,9 @@ test('Preview signup, roles and signed-in management use real database state',as
   const password='isolated test-only credential 1234';
   await provisionPreviewStaff(db,'phase6-owner@example.test','owner',password);
   await provisionPreviewStaff(db,'phase6-operator@example.test','operator',password);
+  await provisionPreviewStaff(db,'phase6-editor@example.test','editor',password);
+  await provisionPreviewStaff(db,'phase6-analyst@example.test','analyst',password);
+  await migrate(db);
   const origin='https://slx.example.test';
   const env={VERCEL_ENV:'preview',SLX_PREVIEW_SIGNUP:'1'};
   const requestFor=db=>commerce({db,auth,env});
@@ -48,6 +52,8 @@ test('Preview signup, roles and signed-in management use real database state',as
   assert.equal((await request('login',{email:'phase6-owner@example.test',password:'wrong'})).status,401);
   const owner=await login('owner');
   const operator=await login('operator');
+  const editor=await login('editor');
+  const analyst=await login('analyst');
   for (const route of ['admin-subscribers','admin-subscribers-csv','admin-social','admin-system','admin-collections']) {
     assert.equal((await request(route)).status,401);
     assert.equal((await request(route,null,operator)).status,403);
@@ -57,6 +63,8 @@ test('Preview signup, roles and signed-in management use real database state',as
   assert.equal((await request('interest',{...signup,email:'example@gmail.com'})).status,400);
   assert.equal((await request('interest',{...signup,website:'spam'})).status,400);
   assert.equal((await request('interest',{...signup,consent:false})).status,400);
+  assert.equal((await request('interest',{...signup,product:'newsletter',email:'newsletter@example.test'})).status,400);
+  assert.equal((await request('interest',{...signup,product:'newsletter',marketing:true,email:'newsletter@example.test'})).status,201);
   assert.equal((await request('interest',signup,null,requestFor(null))).status,503);
   const broken = requestFor({query:async()=>{throw Object.assign(new Error('test connection failed'),{code:'ECONNRESET'});}});
   const unavailable=await request('interest',signup,null,broken);
@@ -81,9 +89,9 @@ test('Preview signup, roles and signed-in management use real database state',as
   assert.equal((await db.query('SELECT status FROM slx_interests WHERE id=$1',[subscriber.id])).rows[0].status,'unsubscribed');
   assert.equal((await request('admin-subscriber-delete',{id:subscriber.id},operator)).status,403);
   assert.equal((await request('unsubscribe',{token:revoke,erase:true})).status,200);
-  assert.equal((await db.query('SELECT id FROM slx_interests')).rows.length,0);
+  assert.equal((await db.query("SELECT id FROM slx_interests WHERE product<>'newsletter'")).rows.length,0);
   assert.equal((await request('interest',{...signup,email:'phase6-erase@example.test'})).status,201);
-  const {rows:[extra]}=await db.query('SELECT id FROM slx_interests');
+  const {rows:[extra]}=await db.query("SELECT id FROM slx_interests WHERE product<>'newsletter'");
   assert.equal((await request('admin-subscriber-delete',{id:extra.id},owner)).status,200);
   assert.equal((await request('admin-social',{YouTube:'https://youtube.com.evil.test/a'},owner)).status,400);
   assert.equal((await request('admin-social',{YouTube:'https://www.youtube.com/@SLXDivision'},owner)).status,200);
@@ -96,6 +104,26 @@ test('Preview signup, roles and signed-in management use real database state',as
   assert.equal(system.database,'connected');
   assert.equal(system.spreadshop,false);
   assert.equal(system.analytics,false);
+  assert.equal((await request('admin-subscribers',null,analyst)).status,403);
+  assert.equal((await request('admin-subscribers-csv',null,editor)).status,403);
+  assert.equal((await request('admin-orders',null,analyst)).status,403);
+  assert.equal((await request('admin-collection',{id:item.collection,release:'live'},analyst)).status,403);
+  const analyticSummary=await (await request('admin-summary',null,analyst)).text();
+  assert.doesNotMatch(analyticSummary,/newsletter@example\.test|phase6-buyer@example\.test/);
+  assert.equal((await request('admin-content',null,analyst)).status,403);
+  const content=await (await request('admin-content',null,editor)).json();
+  const collection={...content.collection[0],kind:'collection',status:'published',name:'Draft collection only'};
+  assert.equal((await request('admin-content-save',collection,editor)).status,200);
+  assert.doesNotMatch(await (await request('store-content')).text(),/Draft collection only/);
+  assert.equal((await request('admin-content-save',{...collection,cover:'https://example.test/photo'},editor)).status,400);
+  const bytes=await readFile('assets/brand/logo.webp');
+  assert.equal((await request('admin-media-validate',{mime:'image/webp',base64:bytes.toString('base64')},editor)).status,200);
+  assert.equal((await request('admin-media-validate',{mime:'image/png',base64:bytes.toString('base64')},editor)).status,400);
+  assert.equal((await request('admin-email-dry-run',{template:'launch'},editor)).status,403);
+  const dry=()=>request('admin-email-dry-run',{template:'launch'},owner).then(response=>response.json());
+  assert.deepEqual(await dry(),{simulated:true,duplicate:false});
+  assert.deepEqual(await dry(),{simulated:true,duplicate:true});
+  assert.match(await (await request('admin-email&template=launch',null,owner)).text(),/DROP 001 has launched/);
   await provisionPreviewStaff(db,'phase6-owner@example.test','owner',`${password} changed`);
   assert.equal((await request('admin-system',null,owner)).status,401);
   env.VERCEL_ENV='production';

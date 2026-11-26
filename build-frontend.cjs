@@ -22,6 +22,7 @@ catch (error) {
 }
 const localPages = process.argv.includes('--local-pages');
 const spreadshopPreview = process.argv.includes('--spreadshop-preview');
+const localAdmin = process.argv.includes('--local-admin');
 if (process.argv.includes('--fangor-preview')) throw new Error('The FANGOR preview is disabled.');
 if (spreadshopPreview && (localPages || process.env.VERCEL)) throw new Error('Spreadshop preview is local only.');
 const folder = spreadshopPreview ? '.spreadshop-preview' : 'dist';
@@ -31,7 +32,7 @@ const storefrontStyles = localPages
   : '<link rel="stylesheet" href="/site.css">';
 const vercelEnvironment = process.env.VERCEL_ENV;
 const vercelHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
-const preview = localPages || spreadshopPreview || (vercelEnvironment && vercelEnvironment !== 'production');
+const preview = localPages || spreadshopPreview || localAdmin || (vercelEnvironment && vercelEnvironment !== 'production');
 const requestedOrigin = !preview && (process.env.SLX_SITE_URL
   || (vercelEnvironment === 'production' && vercelHost ? `https://${vercelHost}` : ''));
 const address = requestedOrigin ? new URL(requestedOrigin) : null;
@@ -50,7 +51,7 @@ const spreadshop = spreadshopEnabled ? {
     : spreadshopPreview && process.env.SLX_SPREADSHOP_PREVIEW_CATALOG==='1' ? 'http://localhost:4181/' : null,
 } : null;
 const fulfillmentMeta = spreadshop ? '<meta name="slx-fulfillment" content="spreadshop">' : '';
-const previewSignupMeta = require('./signup-config.cjs') ? '<meta name="slx-test-signup">' : '';
+const previewSignupMeta = (localAdmin || vercelEnvironment==='preview') && require('./signup-config.cjs') ? '<meta name="slx-test-signup">' : '';
 const writePage = (name, body) => writeFileSync(path.join(output, name), body);
 const email = process.env.SLX_CONTACT_EMAIL ?? '';
 const settings = {
@@ -148,7 +149,7 @@ const home = readFileSync(path.join(root, 'index.html'), 'utf8')
   .replace(/  <link rel="stylesheet" href="style.css">\s*<link rel="stylesheet" href="commerce.css">\s*<link rel="stylesheet" href="drop.css">/,
     storefrontStyles)
   .replace(/  <!-- SEO origin start -->[\s\S]*?  <!-- SEO origin end -->/, () =>
-    `  <!-- SEO origin start -->\n${homeCanonical}  ${shareImage()}\n${fulfillmentMeta}\n${analyticsTag}\n  <!-- SEO origin end -->`)
+    `  <!-- SEO origin start -->\n${homeCanonical}  ${shareImage()}\n${fulfillmentMeta}\n${previewSignupMeta}\n${analyticsTag}\n  <!-- SEO origin end -->`)
   .replace('</head>', `${analyticsScript}\n</head>`)
   .replace(/<!-- SITE HEADER START -->[\s\S]*?<!-- SITE HEADER END -->/, () => `<!-- SITE HEADER START -->\n${header(true)}\n<!-- SITE HEADER END -->`)
   .replace(/<!-- SITE FOOTER START -->[\s\S]*?<!-- SITE FOOTER END -->/, () => `<!-- SITE FOOTER START -->\n${footer(settings)}\n<!-- SITE FOOTER END -->`)

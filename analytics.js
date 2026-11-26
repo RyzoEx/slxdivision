@@ -15,7 +15,7 @@
     const url = new URL(location.pathname === '/index.html' ? '/' : location.pathname, location.origin);
     const query = new URLSearchParams(location.search);
     const campaignIds = (document.querySelector('meta[name="slx-campaign-ids"]')?.content ?? '').split(',');
-    const publicTags = new Set(['google','instagram','facebook','tiktok','telegram','youtube','newsletter','slx','organic','social',
+    const publicTags = new Set(['google','instagram','facebook','pinterest','tiktok','telegram','youtube','newsletter','slx','organic','social','bio','video','pin',
       'email','referral','creator','cpc','paid_social','drop001','heavy-dangels',...campaignIds]);
     for (const param of ['utm_source','utm_medium','utm_campaign','utm_id','utm_content','utm_term']) {
       const value = query.get(param)?.toLowerCase();

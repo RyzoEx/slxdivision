@@ -14,6 +14,8 @@ const links = [
   ['Contact', 'contact.html'], ['FAQ', 'faq.html'],
   ['Payment, shipping and returns', 'payment-delivery-returns.html'],
   ['Privacy policy', 'privacy.html'],
+  ['Cookie policy', 'cookie-policy.html'],
+  ['Terms of use', 'terms.html'],
 ];
 const escape = value => String(value).replace(/[&<>"']/g, char => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',

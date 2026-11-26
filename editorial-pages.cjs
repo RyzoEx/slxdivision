@@ -26,10 +26,19 @@ module.exports = ({ settings, catalog, spreadshop }) => ({
       <h2>Information you give SLX</h2><p>When you contact us, subscribe for updates or use your account, SLX uses the information you provide to respond, send requested updates or run your account. You can unsubscribe using the link in the email. For questions about your data, <a class="detail-link" href="contact.html">contact SLX</a>.</p>
       <h2>Essential cookies and browser storage</h2><p>The site saves your analytics preference in your browser. Sign-in, the cart and favorites may use cookies or browser storage. SLX local metrics require analytics consent.</p>
       <h2>Google Analytics 4</h2><p>With your consent, Google Analytics measures public page visits, product and collection views, artwork opens, teaser plays, social and Spreadshop clicks, and campaign sources. Google receives browser details and analytics cookie identifiers. SLX analytics cookies expire after up to 90 days. SLX does not send form entries, account or order data, customer names, emails or phone numbers to analytics. Ad personalization is disabled.</p>
-      <p>Use Cookie settings to reject analytics or withdraw consent. Withdrawal stops new events and removes accessible SLX analytics cookies. Learn more in the <a class="detail-link" href="https://policies.google.com/privacy?hl=en">Google Privacy Policy</a>.</p>
+      <p>Use Cookie settings to reject analytics or withdraw consent. Withdrawal stops new events and removes accessible SLX analytics cookies. See the <a class="detail-link" href="cookie-policy.html">Cookie policy</a> and the <a class="detail-link" href="https://policies.google.com/privacy?hl=en">Google Privacy Policy</a>.</p>
+      <h2>Notifications and deletion</h2><p>When signup is available, SLX stores your email, the selected design, and the date and version of your consent. News and marketing require separate consent. Use a link in a notification to withdraw or delete the related signup. You can also ask SLX through its contact page. SLX checks that you control the address before deleting a record on request.</p>
       <h2>Spreadshop</h2><p>Spreadshop has its own privacy terms and cookie settings. Your SLX analytics preference controls the SLX tag. See the purchase data terms on Spreadshop.</p>
       <button class="secondary" type="button" data-cookie-settings>Cookie settings</button>
     </section>`,
+  },
+  'cookie-policy.html': {
+    title:'Cookie policy',desc:'Browser storage and analytics preferences on SLX Division.',
+    content:'<section class="shell faq-section privacy-content"><h2>Store preferences</h2><p>The cart, favourites and your analytics choice use browser storage. An authenticated session uses a cookie to keep you signed in.</p><h2>Optional analytics</h2><p>The SLX analytics tag requires both release approval and your consent. Analytics consent is currently available in the development test flow. You can change your preference in Cookie settings.</p><button class="secondary" type="button" data-cookie-settings>Cookie settings</button><p><a class="detail-link" href="privacy.html">Privacy policy</a></p></section>',
+  },
+  'terms.html': {
+    title:'Terms of use',desc:'Terms for the SLX Division pre-launch website.',
+    content:'<section class="shell faq-section privacy-content"><h2>Pre-launch website</h2><p>SLX Division displays artwork and collection information. Purchases are unavailable during pre-launch and no product availability or launch date is guaranteed.</p><h2>Partner shop</h2><p>If partner sales open, Spreadshop provides the official catalogue, checkout, payment, delivery and returns under its published terms. See <a class="detail-link" href="payment-delivery-returns.html">Payment, shipping and returns</a>.</p><h2>Questions</h2><p>Use the official channels on the <a class="detail-link" href="contact.html">Contact page</a>.</p></section>',
   },
   'shop.html': {
     title: 'Shop', seoTitle:'Streetwear shop',

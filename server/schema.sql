@@ -152,6 +152,12 @@ ALTER TABLE slx_interests ADD COLUMN IF NOT EXISTS consent_version text;
 ALTER TABLE slx_interests ADD COLUMN IF NOT EXISTS marketing_at timestamptz;
 ALTER TABLE slx_interests ADD COLUMN IF NOT EXISTS withdrawn_at timestamptz;
 CREATE INDEX IF NOT EXISTS slx_interests_created ON slx_interests(created_at DESC,id DESC);
+CREATE TABLE IF NOT EXISTS slx_mail_previews (
+  template text PRIMARY KEY,
+  state text NOT NULL CHECK(state IN ('simulated','failed')),
+  checked_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE slx_mail_previews ENABLE ROW LEVEL SECURITY;
 UPDATE slx_interests SET delivery_key=id WHERE delivery_key IS NULL;
 ALTER TABLE slx_interests ALTER COLUMN delivery_key SET NOT NULL;
 CREATE TABLE IF NOT EXISTS slx_audit (

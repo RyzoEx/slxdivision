@@ -12,6 +12,8 @@ import spreadshop from '../spreadshop/config.cjs';
 import { recordSpreadshopEntry, spreadshopCsv, spreadshopReport } from './spreadshop-finance.mjs';
 import { currentUser, Failure, isAdmin, newId, readJson, requireThat, throttle } from './security.mjs';
 import { collectionSettings, updateCollection, socialSettings, updateSocial, subscribers, deleteSubscriber, subscriberSummary } from './store-management.mjs';
+import {drafts,saveDraft,mediaLibrary,validateMedia} from './editorial.mjs';
+import {dryRun,emailHtml,emailPreview} from './email-preview.mjs';
 
 const baseHeaders = { 'Cache-Control':'no-store','X-Robots-Tag':'noindex','X-Content-Type-Options':'nosniff' };
 function json(data, status = 200, headers = {}) {
@@ -107,7 +109,25 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       if (op === 'admin-summary' && get) {
         const showSignups = (manager(user) || user.role==='analyst') && (env.VERCEL_ENV!=='production' || mode==='live');
         const [config,items,{rows},signups] = await Promise.all([settings(db),catalog(db),db.query('SELECT status,COUNT(*)::int AS count FROM slx_orders WHERE mode=$1 GROUP BY status',[mode]),showSignups ? subscriberSummary(db) : null]);
-        return json({...adminMetadata(user,config,items,env,auth),counts:rows,products:items.length,signups});
+        const {collection:[current]}=await drafts(db);
+        return json({...adminMetadata(user,config,items,env,auth),counts:rows,products:items.length,signups,
+          currentCollection:current ? {name:current.name,status:current.status} : null,database:'connected'});
+      }
+      if (['admin-content','admin-media'].includes(op) && get) {
+        requireThat(editor(user),403,'Недостатньо прав.');
+        return json(op==='admin-media' ? {media:mediaLibrary(),uploads:false} : {...await drafts(db),media:mediaLibrary()});
+      }
+      if (op==='admin-email' && get) {
+        requireThat(manager(user),403,'Недостатньо прав.');
+        const data=await emailPreview(db,origin);
+        const template=url.searchParams.get('template');
+        if (!template) return json(data);
+        const mail=data.templates.find(item=>item.id===template);
+        requireThat(mail,404,'Шаблон не знайдено.');
+        return new Response(emailHtml(mail,data.assets,{collection:`${origin}/collection-heavy-dangels.html`,unsubscribe:`${origin}/privacy.html`}),{
+          headers:{...baseHeaders,'Content-Type':'text/html; charset=utf-8',
+            'Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; frame-ancestors 'none'; base-uri 'none'"},
+        });
       }
       if (op === 'admin-products' && get) {
         requireThat(manager(user),403,'Недостатньо прав.');
@@ -187,7 +207,7 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
 
       requireThat(request.method==='POST',404,'Маршрут не знайдено.');
       requireThat(request.headers.get('origin')===origin,403,'Запит має надходити із сайту SLX.');
-      const data = await readJson(request,op==='admin-upload' ? 2000000 : op==='interest' ? 2048 : undefined);
+      const data = await readJson(request,op==='admin-media-validate' ? 4_350_000 : op==='admin-upload' ? 2000000 : op==='interest' ? 2048 : undefined);
       const ip = request.headers.get('x-vercel-forwarded-for')?.split(',')[0]?.slice(0,80) || 'local';
       if (op==='login') return json({ok:true},200,{'Set-Cookie':await login(db,auth,data,ip,secure)});
       if (op==='otp' || op==='verify') {
@@ -256,6 +276,14 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       if (op==='admin-collection') {
         requireThat(editor(user) && (mode==='live' || env.VERCEL_ENV==='preview'),403,'Колекції редагуються лише в робочому режимі.');
         return json(await updateCollection(db,user,data));
+      }
+      if (op==='admin-content-save' || op==='admin-media-validate') {
+        requireThat(editor(user),403,'Недостатньо прав.');
+        return json(op==='admin-content-save' ? await saveDraft(db,user,data) : validateMedia(data));
+      }
+      if (op==='admin-email-dry-run') {
+        requireThat(manager(user) && env.VERCEL_ENV!=='production',403,'Dry run доступний у тестовому середовищі.');
+        return json(await dryRun(db,user,data.template));
       }
       if (op==='admin-social') {
         requireThat(editor(user) && (mode==='live' || env.VERCEL_ENV==='preview'),403,'Недостатньо прав.');

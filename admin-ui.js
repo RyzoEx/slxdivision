@@ -22,9 +22,10 @@
     garment:'Одяг',printing:'Друк',fulfillment:'Фулфілмент',other:'Додаткові витрати',
     shipping:'Доставка',payment_fee:'Платіжна комісія',return_reserve:'Витрати на повернення',tax:'Податки',
   };
-  const roles = {owner:'Власник',manager:'Менеджер',operator:'Оператор'};
+  const roles = {owner:'Власник',manager:'Менеджер',operator:'Оператор',editor:'Редактор',analyst:'Аналітик'};
   const tabs = {
-    dashboard:['Огляд','admin-summary'],subscribers:['Підписники','admin-subscribers'],collections:['Колекції','admin-collections'],
+    dashboard:['Огляд','admin-summary'],subscribers:['Підписники','admin-subscribers'],collections:['Колекції','admin-content'],
+    designs:['Дизайни','admin-content'],website:['Вебсайт','admin-content'],media:['Медіатека','admin-media'],email:['Листи','admin-email'],
     social:['Соцмережі','admin-social'],system:['Система','admin-system'],products:['Товари','admin-products'],
     orders:['Замовлення','admin-orders'],customers:['Клієнти','admin-customers'],manufacturing:['Виробництво','admin-manufacturing'],
     partners:['Виробники','admin-manufacturers'],finance:['Фінанси','admin-finance'],
@@ -69,6 +70,17 @@
   const brief = id => id.slice(0,8).toUpperCase();
   const ds = value => dt.format(new Date(value));
   const heading = title => h('h2',{},title);
+  function confirmDelete() {
+    return new Promise(resolve=>{
+      const dismiss=h('button',{className:'secondary',value:'cancel',autofocus:true},'Скасувати');
+      const accept=h('button',{className:'secondary',value:'delete'},'Підтвердити видалення');
+      const title=heading('Видалити заявку?'); title.id='subscriber-delete-title';
+      const modal=h('dialog',{className:'ops-confirm',ariaLabelledBy:title.id},title,note('Заявку і запис згоди буде видалено.'),
+        h('form',{method:'dialog'},dismiss,accept));
+      modal.addEventListener('close',()=>{resolve(modal.returnValue==='delete');modal.remove();},{once:true});
+      document.body.append(modal);modal.showModal();
+    });
+  }
   function form(fields, submit, run, {refresh=true,feedback='Збережено.'} = {}) {
     const node = h('form',{className:'ops-form'},fields,submit);
     node.addEventListener('submit',async event=>{
@@ -86,13 +98,17 @@
   }
   function dashboard(data) {
     const signups = data.signups;
-    const eventNames = {'admin.login':'Вхід до панелі','collection.update':'Оновлено колекцію','social.update':'Оновлено соцмережі',
+    const eventNames = {'admin.login':'Вхід до панелі','collection.update':'Оновлено колекцію','social.update':'Оновлено соцмережі','editorial.save':'Збережено чернетку',
       'interest.delete':'Видалено заявку','interest.dispatch':'Запущено надсилання'};
     return [note(data.sales ? 'LIVE · Приймаємо заявки без списання коштів.' : 'COMING SOON · Продажі вимкнено.'),
+      ...(data.currentCollection ? [note(`${data.currentCollection.name} · ${data.currentCollection.status} · База підключена`)] : []),
       ...(signups ? [h('dl',{className:'ops-metrics'},
         h('div',{},h('dt',{},'Підписники новин'),h('dd',{},signups.subscribers)),
         h('div',{},h('dt',{},'Запити на сповіщення'),h('dd',{},signups.requests)),
+        h('div',{},h('dt',{},'Відкликані згоди'),h('dd',{},signups.withdrawn)),
         h('div',{},h('dt',{},'Товари'),h('dd',{},data.products))),
+        card(heading('Заявки за 14 днів · UTC'),signups.daily.some(row=>row.count>0) ? h('ul',{className:'ops-chart'},
+          signups.daily.map(({day,count})=>h('li',{},h('time',{dateTime:day},day.slice(5)),h('meter',{min:0,max:Math.max(1,...signups.daily.map(item=>item.count)),value:count,ariaLabel:day}),h('strong',{},count)))) : note('За останні 14 днів заявок немає.')),
         card(heading('Попит за дизайнами'),...(signups.designs.length ? signups.designs.map(row=>h('p',{className:'ops-data-row'},row.name,h('strong',{},row.count))) : [note('Підтверджених заявок поки немає.')])),
         card(heading('Останні події'),...(signups.activity.length ? signups.activity.map(row=>h('p',{className:'ops-data-row'},eventNames[row.action],h('time',{},ds(row.created_at)))) : [note('Подій поки немає.')]))] : []),
       note(data.telegramReady ? 'Telegram підключено.' : 'Telegram очікує налаштування.'),
@@ -102,19 +118,25 @@
     const consent = [['all','Усі'],['active','Згода є'],['withdrawn','Згоду відкликано'],['legacy','Згода не зафіксована']];
     const scopes = [['all','Усі'],['newsletter','Новини SLX'],['product','Сповіщення про товар']];
     const filters = form([field('Пошук за email','q',subscriberFilters.q,{type:'search',maxLength:180}),
-      choose('Тип','scope',scopes,subscriberFilters.scope),choose('Згода','consent',consent,subscriberFilters.consent)],
+      choose('Тип','scope',scopes,subscriberFilters.scope),choose('Згода','consent',consent,subscriberFilters.consent),
+      field('З дати · UTC','from',subscriberFilters.from,{type:'date'}),field('До дати · UTC','to',subscriberFilters.to,{type:'date'}),
+      choose('Дизайн','design',[['','Усі'],...data.designs.map(item=>[item.id,item.name])],subscriberFilters.design),
+      choose('Сортування','sort',[['newest','Спочатку нові'],['oldest','Спочатку давні']],subscriberFilters.sort)],
       h('button',{type:'submit',className:'primary'},'Фільтрувати'),values=>{subscriberFilters=values;},{feedback:''});
     const results = data.subscribers.map(row=>{
       const canDelete = preview || mode==='live';
       const permission = row.status==='unsubscribed' ? consent[2][1] : row.consent_at ? consent[1][1] : consent[3][1];
-      const deletion = h('details',{className:'ops-delete'},h('summary',{},'Видалити…'),
-        note('Заявку і запис згоди буде видалено.'),action('Підтвердити видалення',async()=>{
+      const deletion = action('Видалити…',async()=>{
+          if (!(await confirmDelete())) return;
           await post('admin-subscriber-delete',{id:row.id});
           if (data.subscribers.length===1 && data.page>1) subscriberFilters.page=data.page-1;
           await render();
-        }));
+        });
       return h('li',{className:'ops-subscriber'},h('div',{},h('strong',{},row.email),note(row.product==='newsletter'?'Новини SLX':row.product)),
-        h('div',{},h('time',{},ds(row.created_at)),note(permission)),canDelete ? deletion : null);
+        h('div',{},h('time',{},ds(row.created_at)),note(permission),h('details',{},h('summary',{},'Історія згоди'),
+          note(row.consent_at ? `${ds(row.consent_at)} · версія ${row.consent_version}` : 'Первинну згоду не зафіксовано.'),
+          row.marketing_at ? note(`Маркетинг · ${ds(row.marketing_at)}`) : null,
+          row.withdrawn_at ? note(`Відкликано · ${ds(row.withdrawn_at)}`) : null)),canDelete ? deletion : null);
     });
     const go = page=>{subscriberFilters={...subscriberFilters,page};return render();};
     return [filters,h('a',{className:'secondary',href:endpoint('admin-subscribers-csv',{...subscriberFilters,mode}),download:'slx-subscribers.csv'},'Експортувати CSV'),
@@ -131,6 +153,7 @@
   function system(data) {
     return [card(heading('Стан сервісів'),
       ...[['База даних',`${data.database==='connected'?'Підключено':'Недоступна'} · ${data.latencyMs} мс`],
+        ['Backend',data.backend],['Версія',data.version],['Коміт',data.commit ?? 'Локальна збірка'],['Перевірено',ds(data.checkedAt)],['Пошта',data.email],
         ['Середовище',data.environment],['Віджет Spreadshop',data.spreadshop?'Увімкнено':'Вимкнено'],
         ['Аналітика',data.analytics?'Увімкнено':'Вимкнено'],['Тестова форма',data.previewSignup?'Увімкнено':'Вимкнено']]
         .map(([label,value])=>h('p',{className:'ops-data-row'},label,h('strong',{},value))),action('Перевірити з’єднання',render))];
@@ -221,16 +244,59 @@
     return [h('details',{className:'ops-card'},h('summary',{},'Додати виробника'),editor({})),
       ...data.manufacturers.map(partner=>h('details',{className:'ops-card'},h('summary',{},partner.name),editor(partner)))];
   }
-  function collections(data) {
-    return [note('Статус колекції в панелі фіксує готовність. Продажі керуються окремим чеклістом запуску.'),
-      ...data.collections.map(item=>card(heading(item.name),note(`Дизайнів: ${item.count} · ${item.release==='live'?'Live':'Coming Soon'}`),
-        preview || mode==='live' ? form([field('Назва','name',item.name,{maxLength:100,required:true}),
-          h('label',{},'Опис для сторінки колекції',h('textarea',{name:'description',value:item.description,maxLength:1000})),
-          choose('Статус колекції','release',[['coming-soon','Coming Soon'],['live','Live']],item.release),
-          field('Внутрішня примітка','notes',item.notes,{maxLength:1000}),
-          ...item.designs.map(design=>checkbox(`Показувати ${design.name}`,design.id,!item.hidden.includes(design.id)))],
-        summary(),({name,description,release,notes,...visible})=>post('admin-collection',{id:item.id,name,description,release,notes,
-          hidden:item.designs.filter(design=>visible[design.id]!=='on').map(design=>design.id)})) : note(item.notes || 'Приміток немає.')))];
+  function editorial(data,kind) {
+    const assets=[['','Без обкладинки'],...data.media.filter(item=>item.kind!=='video').map(item=>[item.path,item.path.split('/').at(-1)])];
+    return [note('Чернетки доступні команді. Публічну вітрину оновлює окремий погоджений реліз.'),...data[kind].map(item=>{
+      const common=[field('Назва','name',item.name,{required:true,maxLength:100}),
+        h('label',{},'Опис',h('textarea',{name:'description',value:item.description,maxLength:1000}))];
+      const seo=[field('SEO title','seoTitle',item.seoTitle,{maxLength:120}),field('SEO description','seoDescription',item.seoDescription,{maxLength:320})];
+      const visibility=[field('Порядок','order',item.order,{type:'number',min:0,max:9999}),checkbox('Видимість','visible',item.visible)];
+      const fields=kind==='website' ? [...common,...seo,field('Контактний email','email',item.email,{type:'email'}),
+        field('Hero','hero',item.hero,{required:true,maxLength:90}),field('Оголошення','announcement',item.announcement,{maxLength:150}),
+        checkbox('Тизер','teaser',item.teaser),...['collection','about','social'].map(id=>checkbox({collection:'Колекція',about:'Про бренд',social:'Соцмережі'}[id],id,item.sections.includes(id)))
+      ] : kind==='collection' ? [...common,...seo,...visibility,field('Slug','slug',item.slug,{required:true,maxLength:65}),
+        field('Орієнтовна дата','launchDate',item.launchDate,{type:'date'}),choose('Обкладинка','cover',assets,item.cover),
+        choose('Статус','status',[['draft','Draft'],['coming-soon','Coming Soon'],['published','Published'],['archived','Archived']],item.status)
+      ] : [...common,...visibility,field('Категорія','category',item.category,{required:true,maxLength:70}),
+        choose('Колекція','collection',data.collection.map(row=>[row.id,row.name]),item.collection),
+        field('Зображення з медіатеки (через кому)','images',item.images.join(', '),{maxLength:1200}),
+        field('Ідентифікатор Spreadshop','partnerId',item.partnerId,{maxLength:80}),field('Посилання Spreadshop','partnerUrl',item.partnerUrl,{type:'url'}),
+        field('Довідкова ціна GBP','infoPrice',item.infoPrice,{placeholder:'£…'}),
+        choose('Доступність','availability',[['coming-soon','Coming Soon'],['available','Available'],['sold-out','Sold out']],item.availability)];
+      const editor=form(fields,h('button',{type:'submit',className:'primary'},'Зберегти чернетку'),values=>post('admin-content-save',{...values,kind,id:item.id,
+        visible:values.visible==='on',order:Number(values.order),teaser:values.teaser==='on',images:split(values.images ?? ''),
+        sections:['collection','about','social'].filter(id=>values[id]==='on')}));
+      const sample=h('div',{className:'ops-draft-preview'});
+      const pre=action('Переглянути чернетку',()=>{
+        const values=formValues(editor);
+        const cover=values.cover || split(values.images ?? '')[0];
+        sample.replaceChildren(values.announcement ? note(values.announcement) : null,h('h3',{},values.hero || values.name),
+          h('p',{},values.description),assets.some(([path])=>path===cover && path) ? h('img',{src:`/${cover}`,alt:'',loading:'lazy'}) : null,
+          note([values.slug,values.status,values.seoTitle].filter(Boolean).join(' · ')));
+      });
+      return h('details',{className:'ops-card',open:data[kind].length===1},h('summary',{},item.name),editor,pre,sample);
+    })];
+  }
+  function media(data) {
+    const picker=h('input',{type:'file',accept:'image/png,image/webp,image/jpeg,video/mp4'});
+    const verify=action('Перевірити файл',async()=>{
+      const file=picker.files[0];
+      if (!file || file.size>3250000) throw new Error('Виберіть файл до 3,25 МБ.');
+      const base64=await new Promise((resolve,reject)=>{
+        const reader=new FileReader(); reader.onload=()=>resolve(reader.result.split(',')[1]);reader.onerror=reject;reader.readAsDataURL(file);
+      });
+      const result=await post('admin-media-validate',{mime:file.type,base64});
+      message.textContent=`Формат перевірено · ${result.bytes} Б. Зберігання вимкнено.`;
+    });
+    return [card(heading('Перевірка нового файла'),h('label',{},'Файл',picker),verify),
+      h('ul',{className:'ops-subscriber-list'},data.media.map(item=>h('li',{className:'ops-data-row'},
+        h('a',{href:`/${item.path}`,target:'_blank',rel:'noopener'},item.path.split('/').at(-1)),note(item.kind))))];
+  }
+  function email(data) {
+    return [note('Dry run реєструє перевірку шаблону. Жоден лист не надсилається.'),...data.templates.map(item=>card(heading(item.title),
+      h('a',{className:'secondary',href:endpoint('admin-email',{template:item.id,mode}),target:'_blank',rel:'noopener'},'Переглянути HTML'),
+      preview ? action('Dry run',async()=>{await post('admin-email-dry-run',{template:item.id});await render();}) : null,
+      data.history.some(row=>row.template===item.id) ? note('Симуляція зафіксована.') : null))];
   }
   function testOrder(products) {
     const rows = h('div',{className:'test-order-rows'});
@@ -431,11 +497,13 @@
         summary(),values=>post('admin-staff',{id:staff.id,role:values.role,active:values.active==='on'})))));
     return output;
   }
-  const views = {dashboard,subscribers,social,system,products,collections,orders,customers,manufacturing:data=>orders(data,true),partners,finance,referrals:circles,settings:configuration};
+  const views = {dashboard,subscribers,social,system,products,collections:data=>editorial(data,'collection'),designs:data=>editorial(data,'product'),
+    website:data=>editorial(data,'website'),media,email,orders,customers,manufacturing:data=>orders(data,true),partners,finance,referrals:circles,settings:configuration};
   function navigation() {
     const role = me.role;
+    const limited={operator:['dashboard','orders','manufacturing'],analyst:['dashboard','system'],editor:['dashboard','collections','designs','website','media','social','system']};
     const list = Object.keys(tabs).filter(id=>(id!=='subscribers' || subscriberAccess || mode==='live')
-      && (role==='owner' || (role==='manager' ? id!=='settings' : ['dashboard','orders','manufacturing'].includes(id))));
+      && (role==='owner' || (role==='manager' ? id!=='settings' : limited[role]?.includes(id))));
     const modeSelect = choose('Режим','mode',[['test','Тестові дані'],['live','Робочі дані']],mode);
     modeSelect.addEventListener('change',event=>{
       mode=event.target.value;
@@ -453,7 +521,7 @@
   async function render() {
     const version = ++loadNumber;
     if (me) navigation();
-    panel.replaceChildren(note('Завантажуємо…'));
+    panel.replaceChildren(h('p',{className:'ops-loading',role:'status'},'Завантажуємо…'));
     try {
       let summaryData;
       if (!me) {
