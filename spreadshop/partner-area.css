@@ -1,60 +1,71 @@
-/* SLX Division — paste into Spreadshop's Edit Shop CSS field. */
+/* SLX Division — replace the contents of Edit Shop CSS with this file. */
 :root {
   --slx-base: #0a0a0a;
   --slx-surface: #161616;
   --slx-paper: #f6f6f6;
-  --slx-line: #424242;
-  --slx-action: #f0f0f0;
-  --slx-action-hover: #d5d5d5;
-  --slx-muted: #b8b8b8;
+  --slx-muted: #a0a0a0;
+  --slx-line: #303030;
 }
 
-:is(.SprdMain, #sprd-container, .sprd--standalone, .sprd–standalone) {
+/* Shop chrome can be a sibling of the catalog rather than a descendant. */
+:is(.SprdMain, #sprd-container, #sprd-content, .sprd--standalone, .sprd–standalone,
+    .sprd-header, .sprd-info-footer,
+    body:has(#sprd-content, .sprd-startpage-teaser)
+      :is(header, footer, [role="banner"], [role="contentinfo"]):not(main *, article *, dialog *)) {
   color-scheme: dark;
+  background-color: var(--slx-base) !important;
+  color: var(--slx-paper) !important;
+  border-color: var(--slx-line) !important;
   font-family: Manrope, system-ui, sans-serif;
-  background-color: var(--slx-base) !important;
-  color: var(--slx-paper) !important;
 }
 
-:is(.SprdMain, #sprd-container) #sprd-content {
-  background-color: var(--slx-base) !important;
-  color: var(--slx-paper) !important;
-}
-
-:is(.SprdMain, #sprd-container) :is(
-  .sprd-navigation,
-  .sprd-department-filter,
-  .sprd-product-list-item
+:is(#sprd-content, .SprdMain, #sprd-container) :is(
+    .sprd-navigation, .sprd-department-filter, .sprd-product-list-item, .sprd-detail-info
 ) {
   background-color: var(--slx-surface) !important;
   border-color: var(--slx-line) !important;
   color: var(--slx-paper) !important;
 }
 
-/* The standalone header and footer own their colours even outside #sprd-content. */
-:is(.sprd-header, .sprd-info-footer),
-:is(.SprdMain, #sprd-container) :is(header, footer),
-:is(.sprd--standalone, .sprd–standalone) :is(header, footer, [role="banner"], [role="contentinfo"]) {
+/* Menus and dialogs can be rendered in a portal outside #sprd-container. */
+:is(.sprd-department-filter__menu, .sprd-language-switch__languages,
+    body:has(#sprd-content, .sprd-startpage-teaser, [data-spreadshop-mount])
+      :is(dialog, [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"])) {
   color-scheme: dark;
-  background-color: var(--slx-base) !important;
-  color: var(--slx-paper) !important;
+  background-color: var(--slx-surface) !important;
   border-color: var(--slx-line) !important;
+  color: var(--slx-paper) !important;
 }
 
-:is(.sprd-header, .sprd-info-footer, .SprdMain header, .SprdMain footer, #sprd-container header, #sprd-container footer,
-    .sprd--standalone [role="banner"], .sprd--standalone [role="contentinfo"],
-    .sprd–standalone [role="banner"], .sprd–standalone [role="contentinfo"]) :is(a, button, [role="button"]) {
-  color: inherit;
+/* Set text on known dark sections. Control color pairs are defined below. */
+:is(#sprd-content, .SprdMain, #sprd-container, .sprd-header, .sprd-info-footer,
+    .sprd-department-filter__menu, .sprd-language-switch__languages,
+    body:has(#sprd-content, .sprd-startpage-teaser, [data-spreadshop-mount])
+      :is(header, footer, [role="banner"], [role="contentinfo"], dialog, [role="dialog"],
+          [role="alertdialog"], [role="menu"], [role="listbox"]))
+  :where(h1, h2, h3, h4, h5, h6, [role="heading"], legend, label, p, [role="status"], [role="alert"],
+    a[href]:not(.sprd-button, [role="button"], [role="menuitem"], [role="option"]),
+    .sprd-breadcrumb, .sprd-navigation-header__tab, .sprd-department-filter__button) {
+  color: var(--slx-paper) !important;
 }
 
-.sprd-info-footer p { color: var(--slx-muted); }
+:is(#sprd-content, .SprdMain, #sprd-container) :is(.sprd-breadcrumb, [aria-label*="breadcrumb" i]) a,
+body:has(#sprd-content, .sprd-startpage-teaser) .sprd-info-footer :where(p, small) {
+  color: var(--slx-muted) !important;
+}
 
-:is(.sprd-header, .sprd-info-footer, .SprdMain footer, #sprd-container footer) a:hover {
+/* Some themes put their opaque background on an inner chrome wrapper. */
+body:has(#sprd-content, .sprd-startpage-teaser)
+  :is(header, footer, [role="banner"], [role="contentinfo"]):not(main *, article *, dialog *)
+  > :where(div, nav, section) {
+  background-color: var(--slx-base) !important;
+}
+
+:is(#sprd-content, .SprdMain, #sprd-container, .sprd-info-footer) a[href]:not(.sprd-button, [role="button"]):hover {
   text-decoration: underline;
   text-underline-offset: 0.22em;
 }
 
-/* Upload the actual teaser image in Homepage; these rules also work without it. */
 .sprd-startpage-teaser {
   background-color: var(--slx-base) !important;
   color: var(--slx-paper) !important;
@@ -67,56 +78,106 @@
   font-weight: 800;
   line-height: 1.06;
   letter-spacing: -0.045em;
-  text-shadow: 0 2px 12px #000;
+  text-shadow: 0 2px 8px #0a0a0a;
 }
 
 .sprd-startpage-teaser p {
   color: var(--slx-paper) !important;
-  text-shadow: 0 1px 8px #000;
+  text-shadow: 0 1px 8px #0a0a0a;
 }
 
-:is(.SprdMain, #sprd-container) :is(.sprd-detail-info, .sprd-product-list-item) {
-  color: var(--slx-paper);
+/* Pair a control's actual background and ink. Descendant labels share its ink. */
+:is(#sprd-content, .SprdMain, #sprd-container, .sprd-header, .sprd-info-footer,
+    body:has(#sprd-content, .sprd-startpage-teaser, [data-spreadshop-mount])
+      :is(header, footer, [role="banner"], [role="contentinfo"], dialog, [role="dialog"],
+          [role="alertdialog"], [role="menu"], [role="listbox"]))
+  :where(button, .sprd-button, [role="button"], [role="tab"], [role="menuitem"],
+    [role="menuitemcheckbox"], [role="menuitemradio"], [role="option"],
+    .sprd-size .sprd-item, .sprd-department-filter__item) {
+  --slx-control-ink: var(--slx-paper);
+  --slx-control-fill: var(--slx-surface);
+  --slx-control-edge: var(--slx-line);
+  background-color: var(--slx-control-fill) !important;
+  color: var(--slx-control-ink) !important;
+  border-color: var(--slx-control-edge) !important;
+
+  &:where(.sprd-btn-primary) {
+    --slx-control-ink: var(--slx-base);
+    --slx-control-fill: var(--slx-paper);
+    --slx-control-edge: var(--slx-paper);
+    font-weight: 800;
+    border-radius: 999px;
+    min-height: 44px;
+  }
+
+  &:where(.sprd-btn-secondary) { min-height: 44px; }
+
+  &:hover {
+    --slx-control-edge: var(--slx-muted);
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+  }
+
+  &:active,
+  &:where([aria-selected="true"], [aria-pressed="true"], [aria-checked="true"],
+    [data-state="selected"], [data-state="checked"], .sprd-active) {
+    --slx-control-edge: var(--slx-control-ink);
+    outline: 1px solid var(--slx-control-ink);
+    outline-offset: -2px;
+    font-weight: 800;
+  }
+
+  &:where(:disabled, [aria-disabled="true"], .sprd-disabled) {
+    --slx-control-ink: var(--slx-muted);
+    --slx-control-fill: var(--slx-surface);
+    --slx-control-edge: var(--slx-line);
+    opacity: 1;
+    text-decoration: none;
+    outline: none;
+    cursor: not-allowed;
+  }
+
+  & :where(span, label, p, a) {
+    color: var(--slx-control-ink) !important;
+  }
 }
 
-:is(.SprdMain, #sprd-container) :is(.sprd-product-list-item a, .sprd-navigation-header__tab) {
-  color: var(--slx-paper);
-}
-
-:is(.SprdMain, #sprd-container) :is(.sprd-product-list-item a, .sprd-info-footer a):hover {
-  text-decoration: underline;
-  text-underline-offset: 0.22em;
-}
-
-:is(.SprdMain, #sprd-container) .sprd-button.sprd-btn-primary {
-  min-height: 44px;
-  border-radius: 999px;
-  border-color: #aaa !important;
-  background-color: var(--slx-action) !important;
+:is(#sprd-content, .SprdMain, #sprd-container,
+    body:has(#sprd-content, .sprd-startpage-teaser, [data-spreadshop-mount])
+      :is(dialog, [role="dialog"], [role="alertdialog"], [role="menu"]))
+  :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="image"]),
+    select, textarea) {
+  color-scheme: light;
+  background-color: var(--slx-paper) !important;
   color: var(--slx-base) !important;
-  font-weight: 800;
+  border-color: var(--slx-muted) !important;
 }
 
-:is(.SprdMain, #sprd-container) .sprd-button.sprd-btn-primary:not(:disabled, [aria-disabled="true"]):hover {
-  background-color: var(--slx-action-hover) !important;
+:is(#sprd-content, .SprdMain, #sprd-container, dialog, [role="dialog"])
+  :where(input, textarea)::placeholder {
+  color: var(--slx-line) !important;
 }
 
-:is(.SprdMain, #sprd-container) .sprd-button.sprd-btn-secondary {
-  min-height: 44px;
-  border-radius: 6px;
-  border-color: #666 !important;
-  background-color: #191919 !important;
-  color: var(--slx-paper) !important;
+/* Only monochrome paths in header controls follow the text color. */
+:is(.sprd-header, body:has(#sprd-content, .sprd-startpage-teaser) :is(header, [role="banner"]):not(main *))
+  :where(button, a[href], [role="button"]) :where(svg, svg *) {
+  color: inherit !important;
 }
 
-:is(.SprdMain, #sprd-container) .sprd-button.sprd-btn-secondary:not(:disabled, [aria-disabled="true"]):hover {
-  border-color: #aaa !important;
-  background-color: #242424 !important;
+:is(.sprd-header, body:has(#sprd-content, .sprd-startpage-teaser) :is(header, [role="banner"]):not(main *))
+  :where(button, a[href], [role="button"]) :where(svg, svg *) {
+  &[stroke="black" i], &[stroke="#000" i], &[stroke="#000000" i] { stroke: currentColor !important; }
+  &[fill="black" i], &[fill="#000" i], &[fill="#000000" i], &:is(svg:not([fill], [stroke])) {
+    fill: currentColor !important;
+  }
 }
 
-:is(.SprdMain, #sprd-container, .sprd-header, .sprd-info-footer, .sprd--standalone, .sprd–standalone)
-  :is(a, button, input, select, [tabindex]):focus-visible {
-  outline: 2px solid var(--slx-paper);
+:is(#sprd-content, .SprdMain, #sprd-container, .sprd-header, .sprd-info-footer,
+    body:has(#sprd-content, .sprd-startpage-teaser, [data-spreadshop-mount])
+      :is(header, footer, [role="banner"], [role="contentinfo"], dialog, [role="dialog"],
+          [role="alertdialog"], [role="menu"], [role="listbox"]))
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--slx-paper) !important;
   outline-offset: 2px;
   box-shadow: 0 0 0 2px var(--slx-base);
 }
