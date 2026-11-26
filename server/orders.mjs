@@ -51,7 +51,7 @@ export async function catalog(db) {
       collection: sourceItem.collection,
       status: row?.status ?? sourceItem.status, price: row?.price ?? (sourceItem.price ? sourceItem.price * 100 : null),
       sizes: row?.sizes ?? sourceItem.sizes ?? [], colors: row?.colors ?? sourceItem.colors ?? [],
-      photo: row?.photo ?? '', src: sourceItem.photos[0].src,
+      photo: row?.photo ?? '', src: sourceItem.photos[0]?.src ?? '',
       manufacturerId:row?.manufacturerId ?? null, pricing:row?.pricing ?? null,
     };
   });

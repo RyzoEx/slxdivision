@@ -16,11 +16,11 @@
     if (previewNote) previewNote.hidden = !ready;
     if (fallback) fallback.hidden = inactive;
     if (ready) return;
-    heading.lang = inactive ? 'en' : 'uk';
-    heading.textContent = inactive ? 'COMING SOON' : 'Каталог тимчасово недоступний';
+    heading.lang = inactive ? 'en' : 'en';
+    heading.textContent = inactive ? 'COMING SOON' : 'Catalog temporarily unavailable';
     message.textContent = inactive
-      ? 'Продажі ще не почалися. Повідомимо, коли каталог відкриється.'
-      : 'Перегляньте дизайни SLX нижче або спробуйте знову пізніше.';
+      ? 'Sales have yet to open. Get notified when the catalog launches.'
+      : 'Explore the SLX artwork below or try again later.';
   }
 
   const timeout = setTimeout(() => show('unavailable'),15000);

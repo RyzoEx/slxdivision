@@ -15,11 +15,11 @@ function frameAssets(parentOrigin) {
   const policy = `default-src 'none'; script-src 'self' ${provider}; style-src 'self' 'unsafe-inline' ${provider}; img-src data: blob: ${provider}; font-src data: ${provider}; connect-src ${provider}; frame-src ${provider}; form-action ${provider}; base-uri 'none'`;
   return {
     policy:`${policy}; frame-ancestors ${parentOrigin}`,
-    html:`<!doctype html><html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    html:`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="robots" content="noindex"><meta http-equiv="Content-Security-Policy" content="${policy}">
-    <title>Каталог SLX · Spreadshop</title><link rel="stylesheet" href="/widget.css"><link rel="stylesheet" href="/partner-area.css"><script defer src="/loader.js"></script></head>
+    <title>SLX catalog · Spreadshop</title><link rel="stylesheet" href="/widget.css"><link rel="stylesheet" href="/partner-area.css"><script defer src="/loader.js"></script></head>
     <body><main><div id="${shop.baseId}" data-spreadshop-mount data-shop-name="${shop.name}" data-shop-prefix="${shop.prefix}" data-shop-script="${shop.script}"
-      data-shop-locale="${shop.locale}" data-parent-origin="${parentOrigin}"><p id="spreadshop-message">Завантажуємо каталог Spreadshop…</p></div></main></body></html>`,
+      data-shop-locale="${shop.locale}" data-parent-origin="${parentOrigin}"><p id="spreadshop-message">Loading the Spreadshop catalog…</p></div></main></body></html>`,
   };
 }
 

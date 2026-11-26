@@ -22,6 +22,7 @@ const types = {
   '.js': 'text/javascript; charset=utf-8', '.webp': 'image/webp', '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg', '.png': 'image/png', '.avif': 'image/avif',
   '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml',
+  '.mp4': 'video/mp4', '.webm': 'video/webm',
 };
 function headersFor(pathname) {
   const matched = config.headers.filter(rule => rule.source === '/(.*)' || rule.source === pathname);

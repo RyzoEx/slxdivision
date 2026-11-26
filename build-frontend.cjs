@@ -6,8 +6,11 @@ const path = require('node:path');
 const { header, footer, escape } = require('./site-shell.cjs');
 const editorial = require('./editorial-pages.cjs');
 const { loadInventory } = require('./inventory.cjs');
-const { grid, inventoryPages } = require('./inventory-pages.cjs');
+const { inventoryPages } = require('./inventory-pages.cjs');
 const { shop, usesSpreadshop, launchApproved } = require('./spreadshop/config.cjs');
+const homeDrop = require('./home-drop.cjs');
+const storefrontSettings = require('./content/storefront.json');
+const { transformSync } = require('esbuild');
 
 const root = realpathSync(__dirname);
 let catalog;
@@ -45,10 +48,13 @@ const writePage = (name, body) => writeFileSync(path.join(output, name), body);
 const email = process.env.SLX_CONTACT_EMAIL ?? '';
 const settings = {
   email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : '',
-  instagram: process.env.SLX_INSTAGRAM_URL,
-  tiktok: process.env.SLX_TIKTOK_URL,
-  telegram: process.env.SLX_TELEGRAM_URL,
+  social: storefrontSettings.social,
 };
+const teaserPath = storefrontSettings.teaser;
+if (teaserPath && !/^assets\/brand\/[a-z0-9][a-z0-9_-]*\.(mp4|webm)$/.test(teaserPath)) {
+  throw new Error('Use an MP4 or WebM path inside assets/brand for the teaser.');
+}
+const teaser = teaserPath && existsSync(path.join(root,teaserPath)) ? teaserPath : '';
 const liveSubscriptions = origin && process.env.SLX_SUBSCRIBE_WEBHOOK
   ? '<meta name="slx-subscription" content="live">' : '';
 const analyticsLive = vercelEnvironment === 'production' && origin === 'https://slxdivision.vercel.app'
@@ -69,8 +75,11 @@ if (!localPages) {
     rmSync(output, { recursive: true });
   }
   mkdirSync(output);
-  for (const file of ['style.css', 'commerce.css', 'commerce-client.js', 'account.js', 'admin-ui.js', 'intro-start.js', 'metrics.js', 'experience.js', 'metrics.html', '404.html', 'storefront.js', 'catalog-ui.js', 'analytics.js']) {
-    copyFileSync(path.join(root, file), path.join(output, file));
+  for (const file of ['style.css', 'commerce.css', 'drop.css', 'artwork.js', 'commerce-client.js', 'account.js', 'admin-ui.js', 'intro-start.js', 'metrics.js', 'experience.js', 'metrics.html', '404.html', 'storefront.js', 'catalog-ui.js', 'analytics.js']) {
+    const source = path.join(root,file);
+    const loader = path.extname(file).slice(1);
+    if (loader === 'html') copyFileSync(source,path.join(output,file));
+    else writePage(file,transformSync(readFileSync(source,'utf8'),{loader,minify:true,legalComments:'none'}).code);
   }
   if (spreadshop?.frame) copyFileSync(path.join(root,'spreadshop','bridge.js'),path.join(output,'spreadshop-bridge.js'));
   if (origin) {
@@ -99,15 +108,18 @@ if (!localPages) {
     mkdirSync(path.dirname(destination), { recursive: true });
     copyFileSync(path.join(root, asset), destination);
   }
+  if (teaser) copyFileSync(path.join(root,teaser),path.join(output,teaser));
 }
 const url = file => origin ? `${origin}/${file}` : file;
-const brandImage = { src:'assets/brand/logo.webp', alt:'Орбітальна емблема SLX' };
+const brandImage = { src:'assets/brand/logo.webp', alt:'SLX orbital emblem' };
 const jsonLd = data => `<script type="application/ld+json">${JSON.stringify(data).replace(/</g,'\\u003c')}</script>`;
 const shareImage = (image = brandImage) => `<meta property="og:image" content="${escape(url(image.src))}">
 <meta property="og:image:alt" content="${escape(image.alt)}">
-<meta name="twitter:card" content="summary_large_image">`;
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="${escape(url(image.src))}">
+<meta name="twitter:image:alt" content="${escape(image.alt)}">`;
 const searchIndex = catalog.activeProducts.map(({ id, name, category, status, sizes, colors, photos }) =>
-  ({ id, name, category, status:status==='available' ? 'coming-soon' : status, sizes:sizes ?? [], colors:colors ?? [], src:photos[0].src, price:null }));
+  ({ id, name, category, status:status==='available' ? 'coming-soon' : status, sizes:sizes ?? [], colors:colors ?? [], src:photos[0]?.src ?? '', price:null }));
 writePage('catalog-index.js', `window.SLX_CATALOG = ${JSON.stringify(searchIndex)};\n`);
 
 const homeCanonical = origin
@@ -116,7 +128,8 @@ const homeCanonical = origin
   ${jsonLd({ '@context':'https://schema.org', '@graph':[
     { '@type':'WebSite', name:'SLX Division', alternateName:'SLX', url:url('') },
     { '@type':'Organization', name:'SLX Division', alternateName:'SLX', url:url(''),
-      logo:url(brandImage.src), ...(settings.email ? { email:settings.email } : {}) },
+      logo:url(brandImage.src), sameAs:Object.values(settings.social).filter(value=>/^https:\/\//.test(value)),
+      ...(settings.email ? { email:settings.email } : {}) },
   ] })}\n`
   : '  <meta name="robots" content="noindex">\n';
 const home = readFileSync(path.join(root, 'index.html'), 'utf8')
@@ -125,12 +138,7 @@ const home = readFileSync(path.join(root, 'index.html'), 'utf8')
   .replace('</head>', `${analyticsScript}\n</head>`)
   .replace(/<!-- SITE HEADER START -->[\s\S]*?<!-- SITE HEADER END -->/, () => `<!-- SITE HEADER START -->\n${header(true)}\n<!-- SITE HEADER END -->`)
   .replace(/<!-- SITE FOOTER START -->[\s\S]*?<!-- SITE FOOTER END -->/, () => `<!-- SITE FOOTER START -->\n${footer(settings)}\n<!-- SITE FOOTER END -->`)
-  .replace(/<!-- SITE INVENTORY START -->[\s\S]*?<!-- SITE INVENTORY END -->/, () => {
-    const content = catalog.activeProducts.length
-      ? `<h2 class="shell related-title">Одяг SLX</h2>${grid(catalog.activeProducts.slice(0, 4))}`
-      : '<section class="shell empty-home"><h2>Пока одягу нема</h2></section>';
-    return `<!-- SITE INVENTORY START -->\n${content}\n<!-- SITE INVENTORY END -->`;
-  });
+  .replace(/<main>[\s\S]*?<\/main>/, () => `<main>\n${homeDrop({catalog,settings,teaser})}\n</main>`);
 writePage('index.html', home);
 
 const pages = { ...editorial({ settings, catalog, spreadshop }), ...inventoryPages(catalog,{spreadshop}) };
@@ -140,12 +148,12 @@ for (const [file, page] of Object.entries(pages)) {
   const title = `${page.seoTitle ?? page.title} | SLX Division`;
   const breadcrumbs = page.trail && jsonLd({
     '@context':'https://schema.org', '@type':'BreadcrumbList',
-    itemListElement:[['Головна',''], ...page.trail, [page.title,file]].map(([name, target], index) => ({
+    itemListElement:[['Home',''], ...page.trail, [page.title,file]].map(([name, target], index) => ({
       '@type':'ListItem', position:index+1, name, item:url(target),
     })),
   });
   writePage(file, `<!doctype html>
-<html lang="uk">
+<html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escape(title)}</title><meta name="description" content="${escape(page.desc)}">
 ${indexable ? `<link rel="canonical" href="${url(file)}">\n<meta property="og:url" content="${url(file)}">` : '<meta name="robots" content="noindex">'}
@@ -153,13 +161,13 @@ ${liveSubscriptions}
 ${fulfillmentMeta}
 ${page.analytics === false ? '' : analyticsTag}
 <meta property="og:type" content="website">
-<meta property="og:locale" content="uk_UA">
+<meta property="og:locale" content="en_GB">
 <meta property="og:site_name" content="SLX Division">
 <meta property="og:title" content="${escape(title)}">
 <meta property="og:description" content="${escape(page.desc)}">
 ${shareImage(page.image)}
 ${indexable && breadcrumbs ? breadcrumbs : ''}
-<link rel="stylesheet" href="style.css"><link rel="stylesheet" href="commerce.css"><link rel="icon" href="/assets/brand/favicon.png" sizes="96x96" type="image/png">
+<link rel="stylesheet" href="style.css"><link rel="stylesheet" href="commerce.css"><link rel="stylesheet" href="drop.css"><link rel="icon" href="/assets/brand/favicon.png" sizes="96x96" type="image/png">
 ${analyticsScript}
 <script src="catalog-index.js" defer></script><script src="commerce-client.js" defer></script><script src="metrics.js" defer></script><script src="storefront.js" defer></script><script src="catalog-ui.js" defer></script>
 ${page.script ? `<script src="${page.script}" defer></script>` : ''}

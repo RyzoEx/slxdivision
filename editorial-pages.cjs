@@ -1,11 +1,11 @@
 const { faqList, socialLinks, escape } = require('./site-shell.cjs');
 const { grid, collectionsPage } = require('./inventory-pages.cjs');
 const { storefront } = require('./spreadshop/storefront.cjs');
-const empty = (text = 'Пока одягу нема') =>
+const empty = (text = 'No items yet.') =>
   `<section class="shell empty-page"><p>${escape(text)}</p></section>`;
 function lookbook(collections) {
   const editions = collections.filter(collection => collection.lookbook?.length);
-  if (!editions.length) return empty('Фотографій поки немає.');
+  if (!editions.length) return empty('No photographs yet.');
   return editions.map(collection => `<section class="shell inventory">
     <h2><a href="collection-${collection.id}.html">${escape(collection.name)}</a></h2>
     <div class="inventory-grid lookbook-grid">${collection.lookbook.map(image =>
@@ -15,78 +15,78 @@ function lookbook(collections) {
 
 module.exports = ({ settings, catalog, spreadshop }) => ({
   'account.html': {
-    title: 'Мій кабінет', desc: 'Вхід та історія замовлень SLX.', noindex:true, analytics:false, script:'account.js',
-    content: '<section class="shell account-panel" id="slx-account"><p role="status">Завантажуємо кабінет…</p></section>',
+    title: 'My account', desc: 'Sign in and view your order history at SLX.', noindex:true, analytics:false, script:'account.js',
+    content: '<section class="shell account-panel" id="slx-account"><p role="status">Loading your account…</p></section>',
   },
   'privacy.html': {
-    title:'Політика приватності',
-    desc:'Як SLX Division використовує дані, cookies та Google Analytics і як змінити свій вибір.',
+    title:'Privacy policy',
+    desc:'How SLX Division uses personal data, cookies and Google Analytics, and how to change your choices.',
     content:`<section class="shell faq-section privacy-content">
-      <h2>Дані, які ви надаєте SLX</h2><p>Якщо ви звертаєтеся до нас, підписуєтеся на новини чи сповіщення про річ або користуєтеся кабінетом, SLX обробляє надані вами дані для відповіді, надсилання обраних сповіщень або роботи кабінету. Підписку можна скасувати за посиланням у листі. З питаннями щодо своїх даних звертайтеся через <a class="detail-link" href="contact.html">контакти SLX</a>.</p>
-      <h2>Необхідні cookies і локальне сховище</h2><p>Сайт зберігає вибір щодо аналітики в браузері. Функції входу, кошика й обраного можуть використовувати cookies або сховище браузера. Локальні лічильники SLX працюють лише за згодою на аналітику.</p>
-      <h2>Google Analytics 4</h2><p>Лише за вашою згодою Google Analytics вимірює відвідування публічних сторінок, перегляди виробів, переходи до Spreadshop і джерела переходів за мітками кампаній. Google отримує технічні дані браузера та ідентифікатори аналітичних cookies. Cookies SLX для GA4 зберігаються до 90 днів. SLX не надсилає в аналітику дані з форм, кабінету або замовлень, адресу електронної пошти, номер телефону чи ім’я покупця. Рекламну персоналізацію вимкнено.</p>
-      <p>Відхилити аналітику або відкликати згоду можна будь-коли через «Налаштування cookies». При відкликанні сайт припиняє надсилати нові події й видаляє доступні аналітичні cookies SLX. Докладніше про обробку даних Google — у <a class="detail-link" href="https://policies.google.com/privacy?hl=uk">політиці приватності Google</a>.</p>
-      <h2>Spreadshop</h2><p>На сайті Spreadshop діють його власні правила приватності та налаштування cookies. Вибір аналітики на SLX керує тегом SLX. Умови обробки даних під час оформлення покупки доступні на сайті Spreadshop.</p>
-      <button class="secondary" type="button" data-cookie-settings>Налаштування cookies</button>
+      <h2>Information you give SLX</h2><p>When you contact us, subscribe for updates or use your account, SLX uses the information you provide to respond, send requested updates or run your account. You can unsubscribe using the link in the email. For questions about your data, <a class="detail-link" href="contact.html">contact SLX</a>.</p>
+      <h2>Essential cookies and browser storage</h2><p>The site saves your analytics preference in your browser. Sign-in, the cart and favorites may use cookies or browser storage. SLX local metrics require analytics consent.</p>
+      <h2>Google Analytics 4</h2><p>With your consent, Google Analytics measures public page visits, product and collection views, artwork opens, teaser plays, social and Spreadshop clicks, and campaign sources. Google receives browser details and analytics cookie identifiers. SLX analytics cookies expire after up to 90 days. SLX does not send form entries, account or order data, customer names, emails or phone numbers to analytics. Ad personalization is disabled.</p>
+      <p>Use Cookie settings to reject analytics or withdraw consent. Withdrawal stops new events and removes accessible SLX analytics cookies. Learn more in the <a class="detail-link" href="https://policies.google.com/privacy?hl=en">Google Privacy Policy</a>.</p>
+      <h2>Spreadshop</h2><p>Spreadshop has its own privacy terms and cookie settings. Your SLX analytics preference controls the SLX tag. See the purchase data terms on Spreadshop.</p>
+      <button class="secondary" type="button" data-cookie-settings>Cookie settings</button>
     </section>`,
   },
   'shop.html': {
-    title: 'Shop', seoTitle:'Каталог вуличного одягу',
-    desc: 'Вуличний одяг SLX Division. Перегляньте футболки з принтами, кепку та шапку з колекції Heavy DAngels.',
+    title: 'Shop', seoTitle:'Streetwear shop',
+    desc: 'Explore original print artwork, tees and accessories from Heavy DAngels.',
     content: spreadshop
-      ? `${storefront(spreadshop)}<h2 class="shell related-title">Дизайни SLX</h2>${grid(catalog.activeProducts,{tools:true})}`
+      ? `${storefront(spreadshop)}<h2 class="shell related-title">Designs by SLX</h2>${grid(catalog.activeProducts,{tools:true})}`
       : grid(catalog.activeProducts, { tools: true }),
   },
   'collections.html': {
-    title: 'Collections', seoTitle:'Колекції вуличного одягу',
-    desc: 'Колекції SLX Division, незалежного українського бренду вуличного одягу. Перегляньте Heavy DAngels та речі з дропу.',
+    title: 'Collections', seoTitle:'Streetwear collections',
+    desc: 'Explore Heavy DAngels, the first drop from independent Ukrainian streetwear label SLX Division.',
     content: collectionsPage(catalog.collections.filter(collection => !collection.archived), catalog.products),
   },
   'about.html': {
-    title: 'About SLX', seoTitle:'Про бренд',
-    desc: 'SLX Division — незалежний український бренд вуличного одягу. Його естетика поєднує андеграунд нульових, вільний крій і графіку музичних обкладинок.',
-    content: `<div class="shell story-grid"><article><h2>Незалежний вуличний одяг</h2><p>Ми запускаємо SLX як незалежний бренд вуличного одягу. Нам близькі андеграунд нульових, вільний крій і графіка старих музичних обкладинок.</p><p>Ми розробляємо принти самостійно й плануємо виготовляти речі після підтвердження замовлення.</p><a class="detail-link" href="payment-delivery-returns.html#made-to-order">Як ми працюємо</a><p><a class="detail-link" href="founders.html">Засновники SLX</a></p></article><img src="assets/brand/logo.webp" alt="Орбітальна емблема SLX" width="1035" height="754"></div>`,
+    title: 'About SLX', seoTitle:'About the brand',
+    desc: 'SLX Division is an independent Ukrainian streetwear label influenced by underground Y2K, loose fits and record sleeve graphics.',
+    content: `<div class="shell story-grid"><article><h2>Independent Ukrainian streetwear</h2><p>SLX is an independent label influenced by underground Y2K, loose cuts and the graphics of old record sleeves.</p><p>We develop our own prints and plan to make pieces after order confirmation.</p><a class="detail-link" href="payment-delivery-returns.html#made-to-order">How it works</a><p><a class="detail-link" href="founders.html">Founders of SLX</a></p></article><img src="assets/brand/logo.webp" alt="Orbital emblem of SLX" width="1035" height="754"></div>`,
   },
   'founders.html': {
-    title: 'Founders', desc: 'Про заснування SLX.',
-    content: `<section class="shell story-grid"><article><h2>Засновники SLX</h2><p>SLX заснували вдвох як незалежний проєкт вуличного одягу.</p></article></section>`,
+    title: 'Founders', desc: 'The founding of SLX.',
+    content: `<section class="shell story-grid"><article><h2>Founders of SLX</h2><p>SLX was founded by two people as an independent streetwear project.</p></article></section>`,
   },
   'lookbook.html': {
-    title: 'Lookbook', seoTitle:'Лукбук колекцій',
-    desc: 'Фотографії колекцій вуличного одягу SLX Division.',
+    title: 'Lookbook', seoTitle:'Collection lookbook',
+    desc: 'Photography and lookbooks from SLX Division.',
     noindex: !catalog.collections.some(collection => collection.lookbook?.length),
     content: lookbook(catalog.collections),
   },
   'archive.html': {
-    title: 'Archive', seoTitle:'Архів колекцій',
-    desc: 'Архів попередніх колекцій вуличного одягу SLX Division.',
+    title: 'Archive', seoTitle:'Collection archive',
+    desc: 'Past collections from SLX Division.',
     noindex: !catalog.collections.some(collection => collection.archived),
     content: catalog.collections.some(collection => collection.archived)
       ? collectionsPage(catalog.collections.filter(collection => collection.archived), catalog.products)
-      : empty('Архів поки порожній.'),
+      : empty('The archive is empty for now.'),
   },
   'contact.html': {
-    title: 'Contact', desc: 'Контакти SLX та новини бренду.',
-    content: `<section class="shell story-grid"><article><h2>Зв’язок зі SLX</h2><p>${settings.email ? `<a href="mailto:${escape(settings.email)}">${escape(settings.email)}</a>` : 'Контактну адресу опублікуємо перед запуском.'}</p><div class="footer-social">${socialLinks(settings)}</div></article><article><h2>Новини SLX</h2><button class="primary" type="button" data-notify="newsletter">Підписатися</button></article></section>`,
+    title: 'Contact', desc: 'Contact SLX and sign up for brand updates.',
+    content: `<section class="shell story-grid"><article><h2>Contact SLX</h2><p>${settings.email ? `<a href="mailto:${escape(settings.email)}">${escape(settings.email)}</a>` : 'Contact details will be added before launch.'}</p><div class="footer-social">${socialLinks(settings)}</div></article><article><h2>Updates from SLX</h2><button class="primary" type="button" data-notify="newsletter">Subscribe</button></article></section>`,
   },
   'faq.html': {
-    title: 'FAQ', seoTitle:'Часті запитання',
-    desc: 'Відповіді на запитання про колекції SLX Division, запуск продажів і сповіщення про наявність.',
+    title: 'FAQ', seoTitle:'Frequently asked questions',
+    desc: 'Find answers about SLX releases, collections and launch updates.',
     content: `<section class="shell faq-section">${spreadshop
-      ? '<div class="faq-list"><details><summary>Де оформити замовлення?</summary><p>Товари з каталогу партнера оформлюються через Spreadshop.</p></details><details><summary>У якій валюті вказано ціни?</summary><p>Ціни в каталозі Spreadshop вказані у фунтах стерлінгів (GBP).</p></details><details><summary>Хто доставляє й оформлює повернення?</summary><p>За доставку та повернення відповідає Spreadshop.</p></details></div>'
-      : faqList()}<p><a class="detail-link" href="payment-delivery-returns.html">Оплата, доставка та повернення</a></p></section>`,
+      ? '<div class="faq-list"><details><summary>Where can I order?</summary><p>Orders in the partner catalog are placed through Spreadshop.</p></details><details><summary>What currency is used?</summary><p>The Spreadshop catalog uses British pounds (GBP).</p></details><details><summary>Who handles shipping and returns?</summary><p>Shipping and returns are handled by Spreadshop.</p></details></div>'
+      : faqList()}<p><a class="detail-link" href="payment-delivery-returns.html">Payment, shipping and returns</a></p></section>`,
   },
   'payment-delivery-returns.html': {
-    title: 'Оплата, доставка та повернення',
-    desc: spreadshop ? 'Оформлення, оплата, доставка та повернення для товарів Spreadshop.' : 'Як SLX Division планує виготовляти речі на замовлення, підтверджувати передоплату, відправляти Новою поштою й обробляти повернення.',
-    content: spreadshop ? `<div class="shell story-grid"><article><h2>Виробництво й оплата</h2><p>SLX створює дизайни. Spreadshop виготовляє вироби зі свого каталогу після оформлення замовлення та приймає оплату. Ціни каталогу вказані у фунтах стерлінгів (GBP).</p><a class="detail-link" href="shop.html#spreadshop">Каталог Spreadshop</a></article>
-      <article><h2>Доставка та повернення</h2><p>Spreadshop організовує доставку та оформлює повернення. Доступні країни, строки й вартість доставки показані під час оформлення. Якщо потрібно змінити або повернути замовлення, скористайтеся контактами служби підтримки у листі про замовлення й вкажіть його номер.</p></article></div>`
-      : `<p class="shell collection-description">SLX готується до запуску. Остаточні ціни, строки виготовлення та умови опублікуємо до відкриття продажів. Зараз можна підписатися на сповіщення на сторінці виробу.</p>
+    title: 'Payment, shipping and returns',
+    desc: spreadshop ? 'Payment, shipping and returns for items sold through Spreadshop.' : 'How SLX plans to confirm direct orders, collect deposits, ship via Nova Poshta, and handle returns.',
+    content: spreadshop ? `<div class="shell story-grid"><article id="made-to-order"><h2>Production and payment</h2><p>SLX creates the designs. Spreadshop produces its catalog items to order and takes payment. Catalog prices are in British pounds (GBP).</p><a class="detail-link" href="shop.html#spreadshop">Catalog on Spreadshop</a></article>
+      <article><h2>Shipping and returns</h2><p>Spreadshop handles shipping and returns. Available destinations, costs and delivery estimates are shown at checkout. To change or return an order, contact support using your order email and include your order number.</p></article></div>`
+      : `<p class="shell collection-description">SLX is preparing to launch. We will publish confirmed prices, timing and terms before sales open. You can register for updates on each product page.</p>
     <div class="shell story-grid">
-      <article id="made-to-order"><h2>Як ми працюємо</h2><p>Ви обираєте виріб і розмір та надсилаєте заявку. Ми перевіряємо доступність, остаточну вартість і строк виготовлення. Робота над виробом починається після підтвердження заявки та отримання часткової передоплати.</p></article>
-      <article id="payment"><h2>Оплата</h2><p>Під час оформлення заявки кошти не списуються. Перед оплатою ми повідомляємо повну вартість, розмір передоплати й залишок до сплати при отриманні.</p></article>
-      <article id="delivery"><h2>Доставка Новою поштою</h2><p>Під час оформлення ви вказуєте місто й відділення або поштомат. Доставка розраховується за тарифами Нової пошти. Після відправлення номер ТТН з’явиться в кабінеті.</p><p>Якщо виготовлення затримується, ми повідомимо новий строк і узгодимо з вами подальші дії.</p></article>
-      <article id="returns"><h2>Скасування та повернення</h2><p>Якщо потрібно скасувати заявку до початку виробництва або під час виготовлення, зверніться до SLX з номером замовлення. Так само можна повідомити про відмову від посилки, виробничий брак, помилково надіслану річ або бажання повернути товар.</p><p>Порядок скасування, строки та умови повернення коштів опублікуємо до запуску.</p><a class="detail-link" href="contact.html">Перейти до контактів</a></article>
+      <article id="made-to-order"><h2>How it works</h2><p>Choose a piece and size and submit a request. SLX checks availability, price and timing. Production starts after confirmation and a deposit.</p></article>
+      <article id="payment"><h2>Payment</h2><p>There is no charge when you submit a request. We confirm the total, deposit and amount due on delivery before payment.</p></article>
+      <article id="delivery"><h2>Nova Poshta shipping</h2><p>Select a city and branch or parcel locker. Nova Poshta rates apply. Tracking appears in your account after dispatch.</p><p>If production is delayed, we will give you an updated estimate and discuss the next steps.</p></article>
+      <article id="returns"><h2>Cancellation and returns</h2><p>To discuss cancellation, manufacturing defects, incorrect items or returns, contact SLX with your order number.</p><p>Cancellation, return and refund terms will be published before launch.</p><a class="detail-link" href="contact.html">Contact SLX</a></article>
     </div>`,
   },
 });

@@ -27,7 +27,10 @@ function loadInventory(root = __dirname) {
   function checkImage(value, field) {
     if (!check(plain(value), field, 'use an object with src and alt')) return;
     string(value.alt, `${field}.alt`, true, 220);
-    if (own(value, 'kind')) check(['photo', 'mockup'].includes(value.kind), `${field}.kind`, 'use photo or mockup');
+    if (own(value, 'kind')) check(['photo', 'mockup', 'artwork'].includes(value.kind), `${field}.kind`, 'use photo, mockup, or artwork');
+    if (value.kind === 'artwork' || own(value,'width') || own(value,'height')) {
+      check([value.width,value.height].every(n=>Number.isSafeInteger(n) && n > 0),field,'use positive dimensions for both width and height');
+    }
     if (!check(typeof value.src === 'string' && imagePath.test(value.src),
       `${field}.src`, 'use a lowercase photo path inside assets/collections or assets/products')) return;
     const file = path.join(root, value.src);
@@ -91,9 +94,11 @@ function loadInventory(root = __dirname) {
       `${field}.price`, 'use a positive whole amount in UAH');
     stringList(entry.sizes, `${field}.sizes`);
     stringList(entry.colors, `${field}.colors`);
-    if (check(Array.isArray(entry.photos) && entry.photos.length > 0, `${field}.photos`, 'add at least one real product photo')) {
+    if (check(Array.isArray(entry.photos) && (entry.photos.length > 0 || entry.status==='coming-soon'),
+      `${field}.photos`, 'add media for products outside pre-launch')) {
       for (const [index, photo] of entry.photos.entries()) checkImage(photo, `${field}.photos[${index}]`);
     }
+    if (entry.artwork !== undefined) checkImage(entry.artwork,`${field}.artwork`);
     if (entry.specifications !== undefined && check(plain(entry.specifications), `${field}.specifications`, 'use an object with labels and values')) {
       for (const [label, value] of Object.entries(entry.specifications)) {
         string(label, `${field}.specifications label`, true, 60);

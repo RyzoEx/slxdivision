@@ -2,7 +2,7 @@
   const dialog = document.createElement('dialog');
   dialog.className = 'drawer';
   dialog.setAttribute('aria-labelledby', 'panel-title');
-  dialog.innerHTML = '<div class="drawer-top"><h2 id="panel-title"></h2><button type="button" class="close-button" aria-label="Закрити" autofocus></button></div><div class="drawer-body"></div>';
+  dialog.innerHTML = '<div class="drawer-top"><h2 id="panel-title"></h2><button type="button" class="close-button" aria-label="Close" autofocus></button></div><div class="drawer-body"></div>';
   document.body.append(dialog);
   const content = dialog.querySelector('.drawer-body');
   const {api,element,money,cart:cartStore,favorites:favoriteStore,catalog} = window.slx;
@@ -28,9 +28,9 @@
     ['Contact','contact.html'], ['FAQ','faq.html']];
 
   function menu(trigger) {
-    const panel = open('menu', 'Меню', trigger);
+    const panel = open('menu', 'Menu', trigger);
     const nav = document.createElement('nav');
-    nav.setAttribute('aria-label', 'Мобільна навігація');
+    nav.setAttribute('aria-label', 'Mobile navigation');
     for (const [name, href] of pages) {
       const link = document.createElement('a');
       link.href = href;
@@ -42,15 +42,15 @@
   }
 
   function search(trigger) {
-    const panel = open('search', 'Пошук', trigger);
-    panel.innerHTML = '<label for="shop-search" class="visually-hidden">Пошук речей</label><input id="shop-search" type="search" placeholder="Пошук речей" autocomplete="off"><div aria-live="polite"></div>';
+    const panel = open('search', 'Search', trigger);
+    panel.innerHTML = '<label for="shop-search" class="visually-hidden">Search items</label><input id="shop-search" type="search" placeholder="Search items" autocomplete="off"><div aria-live="polite"></div>';
     const input = panel.querySelector('input');
     const results = panel.querySelector('[aria-live]');
     const update = () => {
       const query = input.value.trim().toLowerCase();
       const found = products.filter(item => `${item.name} ${item.category}`.toLowerCase().includes(query));
       results.replaceChildren();
-      if (!found.length) results.textContent = products.length ? 'Нічого не знайдено.' : 'Пока одягу нема';
+      if (!found.length) results.textContent = products.length ? 'No matching items.' : 'No items yet.';
       for (const item of found) {
         const link = document.createElement('a');
         link.className = 'utility-link';
@@ -65,15 +65,15 @@
   }
 
   function profile(trigger) {
-    const panel = open('profile', 'Профіль', trigger);
-    panel.append(element('a',{href:'account.html',className:'primary'},'Мій кабінет'));
+    const panel = open('profile', 'Account', trigger);
+    panel.append(element('a',{href:'account.html',className:'primary'},'My account'));
   }
 
   function cart(trigger) {
-    open('cart', 'Кошик', trigger);
+    open('cart', 'Cart', trigger);
     if (spreadshop) {
-      content.append(element('p',{className:'muted'},'Кошик і оплата товарів доступні в каталозі Spreadshop.'),
-        element('a',{href:'shop.html#spreadshop',className:'primary'},'Каталог Spreadshop'));
+      content.append(element('p',{className:'muted'},'Spreadshop handles the basket and checkout.'),
+        element('a',{href:'shop.html#spreadshop',className:'primary'},'Spreadshop catalog'));
       return;
     }
     renderCart();
@@ -85,13 +85,13 @@
     for (const badge of document.querySelectorAll('.cart-count')) {
       badge.textContent = count;
       badge.hidden = !count;
-      badge.parentElement.setAttribute('aria-label',count ? `Кошик (${count})` : 'Кошик');
+      badge.parentElement.setAttribute('aria-label',count ? `Cart (${count})` : 'Cart');
     }
     const saved = new Set(favoriteStore.read());
     for (const button of document.querySelectorAll('[data-favorite]')) {
       const active = saved.has(button.dataset.favorite);
       button.setAttribute('aria-pressed',String(active));
-      button.textContent = active ? 'В обраному' : 'В обране';
+      button.textContent = active ? 'Saved' : 'Save to favorites';
     }
   }
 
@@ -100,11 +100,11 @@
   }
 
   function favorites(trigger) {
-    const panel = open('favorites','Обране',trigger);
+    const panel = open('favorites','Favorites',trigger);
     const entries = favoriteStore.read().filter(id=>productById.has(id));
-    if (!entries.length) panel.append('Тут з’являться збережені речі.');
+    if (!entries.length) panel.append('Your saved items will appear here.');
     for (const id of entries) {
-      const remove = element('button',{type:'button',className:'text-button'},'Прибрати');
+      const remove = element('button',{type:'button',className:'text-button'},'Remove');
       remove.addEventListener('click',()=>{
         favoriteStore.write(favoriteStore.read().filter(value=>value!==id));
         badges();
@@ -120,8 +120,8 @@
     const lines = cartStore.read();
     content.replaceChildren();
     if (!lines.length) {
-      content.append(element('p',{},products.length ? 'Кошик порожній.' : 'Пока одягу нема'),
-        element('a',{className:'detail-link',href:'shop.html'},'До каталогу'));
+      content.append(element('p',{},products.length ? 'Your cart is empty.' : 'No items yet.'),
+        element('a',{className:'detail-link',href:'shop.html'},'Browse the catalog'));
       return;
     }
     const data = await catalog();
@@ -140,7 +140,7 @@
         advance += item.advance*line.quantity;
       }
       const quantity = element('input',{type:'number',min:'1',max:'10',value:String(line.quantity)});
-      quantity.setAttribute('aria-label',`Кількість: ${item?.name ?? line.id}`);
+      quantity.setAttribute('aria-label',`Quantity: ${item?.name ?? line.id}`);
       quantity.addEventListener('change',()=>{
         const current = cartStore.read();
         if (current[index]?.id === line.id && quantity.validity.valid && Number.isInteger(quantity.valueAsNumber)) {
@@ -149,55 +149,55 @@
         }
         badges(); renderCart();
       });
-      const remove = element('button',{className:'text-button',type:'button'},'Прибрати');
+      const remove = element('button',{className:'text-button',type:'button'},'Remove');
       remove.addEventListener('click',()=>{
         const current = cartStore.read();
         if (current[index]?.id===line.id) current.splice(index,1);
         cartStore.write(current); badges(); renderCart();
       });
       content.append(element('div',{className:'cart-line'},
-        element('div',{},item ? productLink(line.id,item.name) : 'Річ більше недоступна',
+        element('div',{},item ? productLink(line.id,item.name) : 'Item no longer available',
           element('span',{className:'muted'},[line.size,line.color].filter(Boolean).join(' · ')),
-          data.sales && !enabled ? element('p',{className:'muted'},'Змініть варіант або приберіть річ.') : null),
+          data.sales && !enabled ? element('p',{className:'muted'},'Choose a different option or remove the item.') : null),
         element('div',{className:'cart-actions'},quantity,remove)));
     }
     if (!data.sales) {
-      content.append(element('p',{className:'muted'},'Передзапуск. Речі збережено у списку покупок.'),
-        element('a',{className:'detail-link',href:'payment-delivery-returns.html'},'Оплата, доставка та повернення'));
+      content.append(element('p',{className:'muted'},'Pre-launch. Items are saved in your shopping list.'),
+        element('a',{className:'detail-link',href:'payment-delivery-returns.html'},'Payment, shipping and returns'));
       return;
     }
     if (!complete) return;
-    content.append(element('p',{},`Вартість товарів: ${money(total)}`),
-      element('p',{},`Часткова передоплата: ${money(advance)}`),
-      element('p',{},`Залишок при отриманні: ${money(total-advance)}`),
-      element('p',{className:'muted'},'Доставка за тарифами Нової пошти.'));
-    const checkout = element('button',{type:'button',className:'primary'},'Оформити запит');
+    content.append(element('p',{},`Subtotal: ${money(total)}`),
+      element('p',{},`Deposit: ${money(advance)}`),
+      element('p',{},`Balance on delivery: ${money(total-advance)}`),
+      element('p',{className:'muted'},'Shipping is charged at Nova Poshta rates.'));
+    const checkout = element('button',{type:'button',className:'primary'},'Start order request');
     content.append(checkout);
     checkout.addEventListener('click',async()=>{
       checkout.disabled = true;
       const account = await api('account').catch(()=>({user:null}));
       if (view!==cartRender) return;
       if (account.user?.role!=='customer') {
-        checkout.replaceWith(element('a',{href:'account.html',className:'primary'},'Увійти для оформлення'));
+        checkout.replaceWith(element('a',{href:'account.html',className:'primary'},'Sign in to continue'));
         return;
       }
       const form = element('form',{className:'interest-form'});
       for (const [name,label,options] of [
-        ['name','Ім’я та прізвище',{required:true,autocomplete:'name',maxLength:100}],
-        ['phone','Номер телефону',{required:true,type:'tel',autocomplete:'tel',maxLength:24}],
-        ['contact','Email або Telegram',{required:true,value:account.user.email,maxLength:180}],
-        ['city','Місто',{required:true,maxLength:100}],
-        ['point','Відділення або поштомат Нової пошти',{required:true,maxLength:120}],
-        ['referral','Код Contributor',{maxLength:24}],
+        ['name','Full name',{required:true,autocomplete:'name',maxLength:100}],
+        ['phone','Phone number',{required:true,type:'tel',autocomplete:'tel',maxLength:24}],
+        ['contact','Email or Telegram',{required:true,value:account.user.email,maxLength:180}],
+        ['city','City',{required:true,maxLength:100}],
+        ['point','Nova Poshta branch or parcel locker',{required:true,maxLength:120}],
+        ['referral','Contributor code',{maxLength:24}],
       ]) {
         form.append(element('label',{},label,element('input',{name,...options})));
       }
-      const payment=element('select',{name:'payment',required:true},new Option('Часткова передоплата та решта при отриманні','advance_and_on_delivery'));
-      form.append(element('label',{},'Коментар до замовлення',element('textarea',{name:'comment',maxLength:600})),
-        element('label',{},'Спосіб оплати',payment),
-        element('a',{href:'payment-delivery-returns.html',target:'_blank',rel:'noopener',className:'detail-link'},'Оплата, доставка та повернення'),
-        element('label',{className:'ops-check'},element('input',{type:'checkbox',name:'termsAccepted',required:true}),'Я ознайомився / ознайомилася з умовами'));
-      const send = element('button',{type:'submit',className:'primary'},'Надіслати без оплати');
+      const payment=element('select',{name:'payment',required:true},new Option('Deposit and balance on delivery','advance_and_on_delivery'));
+      form.append(element('label',{},'Order note',element('textarea',{name:'comment',maxLength:600})),
+        element('label',{},'Payment method',payment),
+        element('a',{href:'payment-delivery-returns.html',target:'_blank',rel:'noopener',className:'detail-link'},'Payment, shipping and returns'),
+        element('label',{className:'ops-check'},element('input',{type:'checkbox',name:'termsAccepted',required:true}),'I have read the terms'));
+      const send = element('button',{type:'submit',className:'primary'},'Submit without payment');
       const result = element('p',{});
       result.setAttribute('role','status');
       form.append(send,result);
@@ -214,7 +214,7 @@
           checkoutIntent = undefined;
           cartStore.write([]); badges();
           if (view!==cartRender) return;
-          content.replaceChildren(element('p',{},'Запит прийнято.'),element('a',{href:'account.html',className:'detail-link'},'Мої замовлення'));
+          content.replaceChildren(element('p',{},'Request received.'),element('a',{href:'account.html',className:'detail-link'},'My orders'));
         } catch (error) { result.textContent = error.message; send.disabled = false; }
       });
     });
@@ -226,9 +226,9 @@
     const variants = trigger.closest('.product-variants');
     const size = variants?.querySelector('[data-variant="size"]')?.value ?? '';
     const color = variants?.querySelector('[data-variant="color"]')?.value ?? '';
-    const panel = open('newsletter', item ? 'Повідомити про запуск' : 'Новини SLX', trigger);
+    const panel = open('newsletter', item ? 'Notify me at launch' : 'SLX updates', trigger);
     const redirectToLegacy = document.querySelector('meta[name="slx-subscription"]')?.content === 'live';
-    panel.innerHTML = '<form class="interest-form"><label for="notify-email">Email</label><input id="notify-email" name="email" type="email" maxlength="200" autocomplete="email" required><button class="primary" type="submit">Підписатися</button><p class="muted interest-note"></p><p role="status"></p></form>';
+    panel.innerHTML = '<form class="interest-form"><label for="notify-email">Email</label><input id="notify-email" name="email" type="email" maxlength="200" autocomplete="email" required><button class="primary" type="submit">Subscribe</button><p class="muted interest-note"></p><p role="status"></p></form>';
     const form = panel.querySelector('form');
     const button = form.querySelector('button');
     const status = form.querySelector('[role="status"]');
@@ -238,8 +238,8 @@
       form.before(selection);
     }
     panel.querySelector('.interest-note').textContent = item
-      ? 'Використаємо email, щоб повідомити про наявність цієї речі.'
-      : 'Використаємо email для новин SLX.';
+      ? 'We will email you about this item.'
+      : 'We will email you SLX updates.';
     form.addEventListener('submit', async event => {
       event.preventDefault();
       const email = form.elements.email.value.trim().toLowerCase();
@@ -255,7 +255,7 @@
           if (!response.ok) throw error;
         }
         window.slxMetric?.(item ? 'product_notify_request' : 'newsletter_request');
-        status.textContent = 'Заявку прийнято.';
+        status.textContent = 'Request received.';
         form.reset();
       } catch (error) { status.textContent = error.message; }
       finally { button.disabled = false; }
@@ -283,7 +283,7 @@
       const color = section.querySelector('[data-variant="color"]');
       const message = section.querySelector('[data-cart-message]');
       if ((size && !size.value) || (color && !color.value)) {
-        message.textContent = 'Оберіть розмір і колір з доступних варіантів.';
+        message.textContent = 'Choose an available size and color.';
         (size && !size.value ? size : color).focus();
         return;
       }
@@ -292,8 +292,8 @@
       const existing = lines.find(row=>row.id===entry.id && row.size===entry.size && row.color===entry.color);
       if (existing) existing.quantity = Math.min(10,existing.quantity+1);
       else if (lines.length<20) lines.push(entry);
-      else { message.textContent = 'У кошику вже 20 позицій.'; return; }
-      message.textContent = cartStore.write(lines) ? 'Додано до кошика.' : 'Не вдалося зберегти кошик у цьому браузері.';
+      else { message.textContent = 'Your cart already has 20 items.'; return; }
+      message.textContent = cartStore.write(lines) ? 'Added to cart.' : 'This browser could not save your cart.';
       badges();
     }
   });

@@ -10,8 +10,8 @@ const links = [
   ['Shop', 'shop.html'], ['Collections', 'collections.html'], ['About', 'about.html'],
   ['Founders', 'founders.html'], ['Lookbook', 'lookbook.html'], ['Archive', 'archive.html'],
   ['Contact', 'contact.html'], ['FAQ', 'faq.html'],
-  ['Оплата, доставка та повернення', 'payment-delivery-returns.html'],
-  ['Політика приватності', 'privacy.html'],
+  ['Payment, shipping and returns', 'payment-delivery-returns.html'],
+  ['Privacy policy', 'privacy.html'],
 ];
 const escape = value => String(value).replace(/[&<>"']/g, char => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -22,51 +22,51 @@ function navLinks(entries) {
 
 function header(home = false) {
   return `<header class="header shop-header"><div class="shell header-inner">
-    <nav class="shop-nav" aria-label="Основна навігація">${navLinks(links.slice(0, 3))}</nav>
-    <button class="icon-button mobile-menu-trigger" type="button" data-panel="menu" aria-label="Меню" aria-haspopup="dialog">${icons.menu}</button>
-    <a class="brand chrome-brand" href="${home ? '#top' : '/'}" aria-label="SLX — на початок"><img src="assets/brand/logo.webp" width="86" height="63" alt="SLX"></a>
+    <nav class="shop-nav" aria-label="Main navigation">${navLinks(links.slice(0, 3))}</nav>
+    <button class="icon-button mobile-menu-trigger" type="button" data-panel="menu" aria-label="Menu" aria-haspopup="dialog">${icons.menu}</button>
+    <a class="brand chrome-brand" href="${home ? '#top' : '/'}" aria-label="SLX home"><img src="assets/brand/logo.webp" width="86" height="63" alt="SLX"></a>
     <div class="header-actions">
-      <button class="icon-button" type="button" data-panel="search" aria-label="Пошук" aria-haspopup="dialog">${icons.search}</button>
-      <button class="icon-button profile-trigger" type="button" data-panel="profile" aria-label="Профіль" aria-haspopup="dialog">${icons.profile}</button>
-      <button class="icon-button" type="button" data-panel="favorites" aria-label="Обране" aria-haspopup="dialog">${icons.favorite}</button>
-      <button class="icon-button" type="button" data-panel="cart" aria-label="Кошик" aria-haspopup="dialog">${icons.cart}<span class="cart-count" hidden></span></button>
+      <button class="icon-button" type="button" data-panel="search" aria-label="Search" aria-haspopup="dialog">${icons.search}</button>
+      <button class="icon-button profile-trigger" type="button" data-panel="profile" aria-label="Account" aria-haspopup="dialog">${icons.profile}</button>
+      <button class="icon-button" type="button" data-panel="favorites" aria-label="Favorites" aria-haspopup="dialog">${icons.favorite}</button>
+      <button class="icon-button" type="button" data-panel="cart" aria-label="Cart" aria-haspopup="dialog">${icons.cart}<span class="cart-count" hidden></span></button>
     </div>
   </div></header>`;
 }
 
 function socialLinks(settings = {}) {
-  return ['Instagram', 'TikTok', 'Telegram'].map(label => {
-    const value = settings[label.toLowerCase()];
+  return ['YouTube','Pinterest','TikTok','Instagram','Telegram'].map(label => {
+    const value = settings.social?.[label];
     let url;
     try { url = new URL(value); } catch {}
-    return url?.protocol === 'https:'
-      ? `<a href="${escape(url.href)}" rel="noopener noreferrer">${label}</a>`
-      : `<span class="muted">${label}</span>`;
+    return url?.protocol === 'https:' && !url.username && !url.password
+      ? `<a href="${escape(url.href)}" rel="noopener noreferrer" data-social-platform="${label.toLowerCase()}">${label}</a>`
+      : '';
   }).join('');
 }
 
 function footer(settings) {
   const email = settings.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.email)
     ? `<a href="mailto:${escape(settings.email)}">${escape(settings.email)}</a>`
-    : '<span class="muted">Контакт опублікуємо перед запуском.</span>';
+    : '<span class="muted">Contact details will be added before launch.</span>';
   return `<footer class="footer site-footer"><div class="shell">
     <div class="footer-top">
-      <div><a class="brand chrome-brand footer-brand" href="/" aria-label="SLX — головна"><img src="assets/brand/logo.webp" width="100" height="73" alt="SLX"></a>
-      <p>Незалежний вуличний одяг.</p></div>
-      <nav aria-label="Розділи сайту">${navLinks(links)}</nav>
-      <div class="footer-social" aria-label="Контакти та соціальні мережі">${socialLinks(settings)}${email}</div>
-      <div class="footer-subscribe"><p>Новини SLX</p><button class="primary" type="button" data-notify="newsletter">Підписатися</button></div>
+      <div><a class="brand chrome-brand footer-brand" href="/" aria-label="SLX home"><img src="assets/brand/logo.webp" width="100" height="73" alt="SLX"></a>
+      <p>Independent Ukrainian streetwear.</p></div>
+      <nav aria-label="Site links">${navLinks(links)}</nav>
+      <div class="footer-social" aria-label="Contact and social media">${socialLinks(settings)}${email}</div>
+      <div class="footer-subscribe"><p>SLX updates</p><button class="primary" type="button" data-notify="newsletter">Subscribe</button></div>
     </div>
-    <div class="footer-bottom"><span>© SLX 2026</span><button class="text-button" type="button" data-cookie-settings>Налаштування cookies</button><a href="#top">На початок</a></div>
+    <div class="footer-bottom"><span>© SLX 2026</span><button class="text-button" type="button" data-cookie-settings>Cookie settings</button><a href="#top">Back to top</a></div>
   </div></footer>`;
 }
 
 const faq = [
-  ['Коли з’явиться одяг?', 'Дату старту ще не оголосили. У футері можна підписатися на новини SLX.'],
-  ['Чи можна замовити річ зараз?', 'Під час передзапуску можна підписатися на сповіщення на сторінці виробу.'],
-  ['Що таке Made to Order?', 'Після підтвердження замовлення виготовляємо виріб для вас. До оплати погоджуємо розмір, вартість і строк.'],
-  ['Коли потрібно сплатити передоплату?', 'Надсилання заявки безкоштовне. Після підтвердження замовлення часткова передоплата запускає виробництво, а решту ви сплачуєте при отриманні.'],
-  ['Які будуть умови доставки й повернення?', 'Плануємо доставку Новою поштою. Остаточні умови доставки та повернення опублікуємо до відкриття продажів.'],
+  ['When does the drop launch?', 'A launch date has yet to be announced. Subscribe in the footer for updates.'],
+  ['Can I order now?', 'During pre-launch, you can sign up for updates on each product page.'],
+  ['What does made to order mean?', 'Production starts after order confirmation. Size, price and timing are confirmed before payment.'],
+  ['When is a deposit due?', 'There is no charge for submitting a request. After confirmation, a deposit starts production and the balance is payable on delivery.'],
+  ['What are the shipping and return terms?', 'For direct orders, we plan to use Nova Poshta. Final shipping and return terms will be published before sales open.'],
 ];
 const faqList = () => `<div class="faq-list">${faq.map(([question, answer]) =>
   `<details><summary>${question}</summary><p>${answer}</p></details>`).join('')}</div>`;

@@ -3,7 +3,7 @@
     {
       "id": "heavy-dangels",
       "name": "Heavy DAngels",
-      "description": "Чотири футболки з великими принтами на спині, кепка й шапка. Готична графіка, орбіти SLX і червоні акценти."
+      "description": "The first SLX drop: four original graphics drawn from gothic imagery, underground record art and cyber sigilism."
     }
   ],
   "products": [
@@ -11,67 +11,115 @@
       "id": "blind-seraph-tee",
       "collection": "heavy-dangels",
       "name": "Blind Seraph Tee",
-      "category": "Футболки",
-      "description": "Чорна футболка з принтом на спині. Ангел із зав’язаними очима, лілії та ланцюги на тлі червоного німба. Спереду без принта.",
+      "category": "T-shirts",
+      "description": "A blindfolded angel, lilies and chains against a red halo. Designed for the back of the tee.",
       "status": "coming-soon",
       "photos": [
-        { "src": "assets/products/heavy-dangels/blind-seraph-tee.webp", "alt": "Чорна футболка Blind Seraph Tee з ангелом і червоним німбом на спині, поруч вигляд спереду", "kind": "mockup" }
-      ]
+        {
+          "src": "assets/collections/heavy-dangels/blind-seraph-preview.webp",
+          "alt": "Blindfolded angel with wings, lilies and chains against a red halo",
+          "kind": "artwork",
+          "width": 420,
+          "height": 560
+        }
+      ],
+      "artwork": {
+        "src": "assets/collections/heavy-dangels/blind-seraph.webp",
+        "alt": "Blindfolded angel with wings, lilies and chains against a red halo",
+        "kind": "artwork",
+        "width": 1050,
+        "height": 1400
+      }
     },
     {
       "id": "wirebound-skull-tee",
       "collection": "heavy-dangels",
       "name": "Wirebound Skull Tee",
-      "category": "Футболки",
-      "description": "Чорна футболка з черепом у кільцях колючого дроту на спині. Принт доповнюють червоні акценти й готичний напис Heavy DAngels. Спереду без принта.",
+      "category": "T-shirts",
+      "description": "A skull bound in barbed wire beneath gothic Heavy DAngels lettering. Red accents break up the monochrome print.",
       "status": "coming-soon",
       "photos": [
-        { "src": "assets/products/heavy-dangels/wirebound-skull-tee.webp", "alt": "Чорна футболка Wirebound Skull Tee з черепом у колючому дроті, поруч вигляд спереду", "kind": "mockup" }
-      ]
+        {
+          "src": "assets/collections/heavy-dangels/wirebound-skull-preview.webp",
+          "alt": "Skull bound in barbed wire beneath Heavy DAngels lettering",
+          "kind": "artwork",
+          "width": 420,
+          "height": 560
+        }
+      ],
+      "artwork": {
+        "src": "assets/collections/heavy-dangels/wirebound-skull.webp",
+        "alt": "Skull bound in barbed wire beneath Heavy DAngels lettering",
+        "kind": "artwork",
+        "width": 1050,
+        "height": 1400
+      }
     },
     {
       "id": "chrome-oni-tee",
       "collection": "heavy-dangels",
       "name": "Chrome Oni Tee",
-      "category": "Футболки",
-      "description": "Чорна футболка зі сріблястою маскою оні на спині. Навколо неї — орбітальне коло й гострі зірки. Спереду без принта.",
+      "category": "T-shirts",
+      "description": "A silver oni mask framed by an orbital ring and sharp stars.",
       "status": "coming-soon",
       "photos": [
-        { "src": "assets/products/heavy-dangels/chrome-oni-tee.webp", "alt": "Чорна футболка Chrome Oni Tee зі сріблястою маскою оні, поруч вигляд спереду", "kind": "mockup" }
-      ]
+        {
+          "src": "assets/collections/heavy-dangels/chrome-oni-preview.webp",
+          "alt": "Silver oni mask surrounded by an orbital ring and sharp stars",
+          "kind": "artwork",
+          "width": 512,
+          "height": 560
+        }
+      ],
+      "artwork": {
+        "src": "assets/collections/heavy-dangels/chrome-oni.webp",
+        "alt": "Silver oni mask surrounded by an orbital ring and sharp stars",
+        "kind": "artwork",
+        "width": 1199,
+        "height": 1312
+      }
     },
     {
       "id": "red-eclipse-oni-tee",
       "collection": "heavy-dangels",
       "name": "Red Eclipse Oni Tee",
-      "category": "Футболки",
-      "description": "Чорна футболка з профілем оні на тлі червоного диска. Ланцюги й гострі лінії обрамляють принт на спині. Спереду без принта.",
+      "category": "T-shirts",
+      "description": "An oni in profile against a red eclipse, framed by chains and sharp lines.",
       "status": "coming-soon",
       "photos": [
-        { "src": "assets/products/heavy-dangels/red-eclipse-oni-tee.webp", "alt": "Чорна футболка Red Eclipse Oni Tee з профілем оні на тлі червоного диска, поруч вигляд спереду", "kind": "mockup" }
-      ]
+        {
+          "src": "assets/collections/heavy-dangels/red-eclipse-oni-preview.webp",
+          "alt": "Oni in profile against a red eclipse, framed by chains",
+          "kind": "artwork",
+          "width": 420,
+          "height": 560
+        }
+      ],
+      "artwork": {
+        "src": "assets/collections/heavy-dangels/red-eclipse-oni.webp",
+        "alt": "Oni in profile against a red eclipse, framed by chains",
+        "kind": "artwork",
+        "width": 1050,
+        "height": 1400
+      }
     },
     {
       "id": "orbit-thorn-cap",
       "collection": "heavy-dangels",
       "name": "Orbit Thorn Cap",
-      "category": "Кепки",
-      "description": "Графітова кепка з потертостями, білою емблемою SLX та гострим орнаментом на козирку. Позаду напис Heavy DAngels і ремінець із пряжкою.",
+      "category": "Caps",
+      "description": "A distressed graphite cap with the SLX emblem and Heavy DAngels lettering.",
       "status": "coming-soon",
-      "photos": [
-        { "src": "assets/products/heavy-dangels/orbit-thorn-cap.webp", "alt": "Графітова кепка Orbit Thorn Cap спереду й ззаду з емблемою SLX та написом Heavy DAngels", "kind": "mockup" }
-      ]
+      "photos": []
     },
     {
       "id": "halo-and-horns-beanie",
       "collection": "heavy-dangels",
       "name": "Halo & Horns Beanie",
-      "category": "Шапки",
-      "description": "Чорно-біла шапка з ангелами, рогатими фігурами й зірками. На відвороті — емблема SLX з одного боку та напис Heavy DAngels з іншого.",
+      "category": "Beanies",
+      "description": "A black-and-white beanie with angels, horned figures and stars.",
       "status": "coming-soon",
-      "photos": [
-        { "src": "assets/products/heavy-dangels/halo-and-horns-beanie.webp", "alt": "Шапка Halo & Horns Beanie з двох боків, з чорно-білим орнаментом та емблемою SLX", "kind": "mockup" }
-      ]
+      "photos": []
     }
   ]
 }

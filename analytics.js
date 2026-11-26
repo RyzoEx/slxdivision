@@ -33,21 +33,33 @@
     const gtag = window.gtag;
     gtag('consent','default',denied);
     gtag('consent','update',{...denied,analytics_storage:'granted'});
-    gtag('js',new Date());
     let referrer = '';
     try {
       const source = new URL(document.referrer);
       if (['https:','http:'].includes(source.protocol)) referrer = source.origin + '/';
     } catch {}
-    gtag('set',{page_location:pageLocation(),page_referrer:referrer,ads_data_redaction:true});
+    const locationParams = {page_location:pageLocation(),page_referrer:referrer};
+    gtag('set',{...locationParams,ads_data_redaction:true,
+      ...(debug ? {debug_mode:true} : {})});
+    gtag('js',new Date());
     gtag('config',id,{
-      send_page_view:false,allow_google_signals:false,allow_ad_personalization_signals:false,
+      ...locationParams,
+      allow_google_signals:false,allow_ad_personalization_signals:false,
       cookie_domain:'none',cookie_expires:7776000,cookie_update:false,
       ...(debug ? {debug_mode:true} : {}),
     });
-    send('page_view');
     const item = document.querySelector('[data-product-page]');
     if (item) send('view_item',{items:[{item_id:item.dataset.productPage,item_name:document.querySelector('main h1').textContent}]});
+    const collection = document.querySelector('[data-collection-event]');
+    if (collection) {
+      const marker = collection.querySelector('h2') ?? document.querySelector('main h1');
+      const observer = new IntersectionObserver(entries=>{
+        if (!entries.some(entry=>entry.isIntersecting)) return;
+        send('collection_view',{collection_id:collection.dataset.collectionEvent});
+        observer.disconnect();
+      });
+      if (marker) observer.observe(marker);
+    }
     const script = document.createElement('script');
     script.async = true;
     script.referrerPolicy = 'no-referrer';
@@ -57,7 +69,7 @@
 
   function send(event, params = {}) {
     if (choice !== 'granted' || !started) return;
-    window.gtag('event',event,{...params,send_to:id});
+    window.gtag('event',event,{...params,send_to:id,...(debug ? {debug_mode:true} : {})});
   }
 
   function clearCookies() {
@@ -85,12 +97,12 @@
   panel.className = 'cookie-panel';
   panel.hidden = true;
   panel.setAttribute('aria-labelledby','cookie-title');
-  panel.innerHTML = `<h2 id="cookie-title">Cookies аналітики</h2>
-    <p>Дозволити Google Analytics вимірювати відвідування SLX? Ваш вибір не впливає на роботу магазину.</p>
+  panel.innerHTML = `<h2 id="cookie-title">Analytics cookies</h2>
+    <p>Allow Google Analytics to measure visits to SLX? You can use the store either way.</p>
     <div class="cookie-actions">
-      <button class="secondary" type="button" data-consent="denied">Відхилити</button>
-      <button class="secondary" type="button" data-consent="granted">Дозволити</button>
-      <a class="detail-link" href="/privacy.html">Політика приватності</a>
+      <button class="secondary" type="button" data-consent="denied">Reject</button>
+      <button class="secondary" type="button" data-consent="granted">Allow</button>
+      <a class="detail-link" href="/privacy.html">Privacy policy</a>
     </div>`;
   document.body.append(panel);
   panel.hidden = !(live || debug) || ['granted','denied'].includes(choice);
@@ -116,9 +128,21 @@
       panel.querySelector('button').focus();
     } else if (target.protocol === 'https:' && destinations.has(target.hostname)) {
       send('spreadshop_click',{destination:'spreadshop',placement:'storefront'});
+    } else if (target.matches('[data-social-platform]')) {
+      send('social_click',{platform:target.dataset.socialPlatform});
     }
   },true);
   window.addEventListener('slx:spreadshop-click',()=>{
     send('spreadshop_click',{destination:'spreadshop',placement:'embedded_catalog'});
   });
+  document.addEventListener('slx:artwork-view',event=>{
+    send('artwork_view',{artwork_id:event.target.dataset.artwork});
+  });
+  const playedTeasers = new WeakSet();
+  document.addEventListener('play',event=>{
+    const video = event.target;
+    if (!video.matches?.('video[data-teaser-play]') || playedTeasers.has(video) || !started || choice !== 'granted') return;
+    playedTeasers.add(video);
+    send('teaser_play',{collection_id:video.dataset.teaserPlay});
+  },true);
 })();

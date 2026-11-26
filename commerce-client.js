@@ -7,7 +7,7 @@
     shipped:'Відправлено', delivered:'Доставлено', cancelled:'Скасовано', returned:'Повернено',
     defective:'Брак', unclaimed:'Не отримано',
   };
-  const productStatus = {'coming-soon':'Скоро',available:'У наявності','sold-out':'Розпродано'};
+  const productStatus = {'coming-soon':'Coming soon',available:'Available','sold-out':'Sold out'};
   function endpoint(op, params = {}) { return '/api/commerce?' + new URLSearchParams({op,...params}); }
   async function api(op, {params, body} = {}) {
     const response = await fetch(endpoint(op,params), {

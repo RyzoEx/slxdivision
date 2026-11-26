@@ -12,7 +12,7 @@
       sessionStorage.setItem(`${key}-${event}`, '1');
     } catch {}
   };
-  if (document.querySelector('.brand-hero')) {
+  if (document.querySelector('.drop-hero')) {
     window.slxMetric('landing_view');
     window.addEventListener('slx:analytics-consent',()=>window.slxMetric('landing_view'));
   }

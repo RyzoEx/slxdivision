@@ -14,9 +14,9 @@
         container.dataset.price = item.price;
       }
       const cover = container.querySelector('.inventory-photo img, .product-photo img');
-      if (item.photo && cover) {
+      if (sales && item.photo && cover) {
         const first = container.querySelector('[data-gallery-src]');
-        const alt = `Зображення ${item.name}`;
+        const alt = `Image of ${item.name}`;
         if (first) {
           first.dataset.gallerySrc = item.photo;
           first.dataset.galleryAlt = alt;
@@ -36,17 +36,17 @@
       const variants = container.querySelector('[data-choices]');
       if (!variants) continue;
       variants.replaceChildren();
-      for (const [key,label,options] of [['size','Розмір',item.sizes],['color','Колір',item.colors]]) {
+      for (const [key,label,options] of [['size','Size',item.sizes],['color','Color',item.colors]]) {
         if (!options.length) continue;
         const select = element('select',{});
         select.dataset.variant = key;
-        select.append(new Option('Обрати',''),...options.map(option=>new Option(option,option)));
+        select.append(new Option('Select',''),...options.map(option=>new Option(option,option)));
         variants.append(element('label',{},label,select));
       }
       const add = container.querySelector('[data-cart-add]');
       if (add) {
         add.hidden = item.status === 'sold-out';
-        add.textContent = sales && item.status === 'available' ? 'Додати в кошик' : 'До списку покупок';
+        add.textContent = sales && item.status === 'available' ? 'Add to cart' : 'Save to shopping list';
       }
       container.querySelector('[data-notify]').hidden = item.status !== 'coming-soon';
     }
@@ -79,6 +79,7 @@
   const product = document.querySelector('[data-product-page]');
   if (!product) return;
   const frame = product.querySelector('.product-photo');
+  if (!frame) return;
   const image = frame.querySelector('img');
   const caption = product.querySelector('[data-gallery-caption]');
   const zoom = product.querySelector('[data-photo-zoom]');
@@ -86,7 +87,7 @@
   function setZoom(active) {
     frame.toggleAttribute('data-zoom', active);
     zoom.setAttribute('aria-pressed', String(active));
-    zoom.textContent = active ? 'Зменшити зображення' : 'Наблизити зображення';
+    zoom.textContent = active ? 'Reset image zoom' : 'Enlarge image';
   }
   zoom.addEventListener('click', () => setZoom(!frame.hasAttribute('data-zoom')));
   for (const button of thumbnails) {

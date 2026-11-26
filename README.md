@@ -77,3 +77,8 @@
 - `assets/fonts/` — шрифти з ліцензіями.
 
 Документація Vercel. [Налаштування проєкту](https://vercel.com/docs/project-configuration) · [Захист розгортань](https://vercel.com/docs/deployment-protection)
+# Storefront pre-launch
+
+Run `npm run preview:spreadshop` for the local pre-launch storefront. Add verified social URLs in `content/storefront.json`. Empty entries stay hidden. To add the official vertical teaser, place an MP4 or WebM in `assets/brand/` and set its repository-relative path in the same file. The section only renders when the file exists. Playback uses the native player with no autoplay.
+
+The Heavy DAngels cards use optimized copies of the supplied print files in `assets/collections/heavy-dangels/`. Each card links to the larger print and the existing product page. See [the Spreadshop runbook](SPREADSHOP.md) for launch and analytics gates.
