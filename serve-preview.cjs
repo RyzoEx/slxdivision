@@ -5,15 +5,17 @@ const { readFile } = require('node:fs/promises');
 const { Readable } = require('node:stream');
 const config = require('./vercel.json');
 
+if (process.argv.includes('--fangor-preview')) throw new Error('The FANGOR preview is disabled.');
+const spreadshopPreview = process.argv.includes('--spreadshop-preview');
 const localEnv = path.join(__dirname,'.env.local');
-if (existsSync(localEnv)) process.loadEnvFile(localEnv);
+if (!spreadshopPreview && existsSync(localEnv)) process.loadEnvFile(localEnv);
 
-const output = path.join(__dirname, 'dist');
-const port = Number(process.env.PORT || 4173);
+const output = path.join(__dirname, spreadshopPreview ? '.spreadshop-preview' : 'dist');
+const port = Number(process.env.PORT || (spreadshopPreview ? 4180 : 4173));
 const api = Promise.all([import('./server/commerce.mjs'),import('./server/db.mjs'),import('./server/supabase.mjs')])
   .then(([{commerce},{openPostgres},{supabase}])=>commerce({
-    db:openPostgres(process.env.SLX_PREVIEW_DATABASE_URL || null),auth:supabase(),
-    env:{...process.env,VERCEL_ENV:'development'},local:true,
+    db:openPostgres(spreadshopPreview ? null : process.env.SLX_PREVIEW_DATABASE_URL || null),auth:supabase(),
+    env:{...process.env,VERCEL_ENV:'development',...(spreadshopPreview ? {SLX_FULFILLMENT:'spreadshop'} : {})},local:true,
   }));
 const types = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -23,8 +25,14 @@ const types = {
 };
 function headersFor(pathname) {
   const matched = config.headers.filter(rule => rule.source === '/(.*)' || rule.source === pathname);
-  return Object.fromEntries(matched.flatMap(rule => rule.headers.map(({ key, value }) => [key, value])));
+  const headers = Object.fromEntries(matched.flatMap(rule => rule.headers.map(({ key, value }) => [key, value])));
+  if (spreadshopPreview && pathname==='/shop.html') {
+    headers['Content-Security-Policy']=headers['Content-Security-Policy'].replace(/frame-src [^;]+/, 'frame-src http://localhost:4181');
+  }
+  return headers;
 }
+
+if (spreadshopPreview) require('./spreadshop/frame.cjs').startPreviewFrame(port,4181);
 
 http.createServer(async (request, response) => {
   let requestPath;

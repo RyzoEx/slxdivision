@@ -45,7 +45,7 @@ function collectionsPage(collections, products) {
   }).join('')}</div></section>`;
 }
 
-function productPage(item, collection, related) {
+function productPage(item, collection, related, spreadshop) {
   const specs = Object.entries(item.specifications ?? {});
   const cover = item.photos[0];
   const caption = imageLabel(cover);
@@ -74,14 +74,16 @@ function productPage(item, collection, related) {
             ${item.colors?.length ? `<label>Колір <select data-variant="color">${options(item.colors, 'Обрати колір')}</select></label>` : ''}
           </div>
           <button class="primary" type="button" data-notify="${item.id}" ${item.status === 'sold-out' ? 'hidden' : ''}>Повідомити про запуск</button>
-          <button class="secondary" type="button" data-cart-add="${item.id}" ${item.status === 'sold-out' ? 'hidden' : ''}>До списку покупок</button>
+          ${spreadshop ? '<a class="secondary" href="shop.html#spreadshop">Каталог Spreadshop</a>'
+            : `<button class="secondary" type="button" data-cart-add="${item.id}" ${item.status === 'sold-out' ? 'hidden' : ''}>До списку покупок</button>`}
           <button class="text-button" type="button" data-favorite="${item.id}" aria-pressed="false">В обране</button>
           <p role="status" data-cart-message></p>
         </div>
         <section class="made-to-order" aria-label="Виготовлення на замовлення">
           <h2>Made to Order</h2>
           <p>Кожен виріб SLX виготовляється після підтвердження замовлення. Ми працюємо за моделлю Made to Order і не створюємо надлишкових запасів.</p>
-          <p>Перед оплатою ми підтверджуємо доступність розміру, остаточну вартість і строк виготовлення. Для запуску виробництва потрібна часткова передоплата. Решту ви сплачуєте при отриманні замовлення Новою поштою.</p>
+          ${spreadshop ? '<p>Доступні для замовлення товари та ціни в GBP показує каталог Spreadshop. Оформлення, оплата й доставка відбуваються через Spreadshop.</p>'
+            : '<p>Перед оплатою ми підтверджуємо доступність розміру, остаточну вартість і строк виготовлення. Для запуску виробництва потрібна часткова передоплата. Решту ви сплачуєте при отриманні замовлення Новою поштою.</p>'}
           <a class="detail-link" href="payment-delivery-returns.html">Оплата, доставка та повернення</a>
         </section>` : ''}
         ${specs.length ? `<details><summary>Характеристики</summary><dl>${specs.map(([label, value]) =>
@@ -95,7 +97,7 @@ function collectionTrail(collection) {
   return collection.archived ? [['Архів','archive.html']] : [['Колекції','collections.html']];
 }
 
-function inventoryPages({ collections, products }) {
+function inventoryPages({ collections, products }, {spreadshop} = {}) {
   const pages = {};
   for (const collection of collections) {
     const entries = products.filter(item => item.collection === collection.id);
@@ -112,7 +114,7 @@ function inventoryPages({ collections, products }) {
         ${grid(entries, { tools: true, archived: collection.archived })}`,
     };
     for (const item of entries) {
-      pages[productUrl(item)] = productPage(item, collection, entries.filter(other => other !== item).slice(0, 3));
+      pages[productUrl(item)] = productPage(item, collection, entries.filter(other => other !== item).slice(0, 3),spreadshop);
     }
   }
   return pages;

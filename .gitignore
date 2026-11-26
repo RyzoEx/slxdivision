@@ -1,4 +1,7 @@
 /dist/
+/.fangor-preview/
+/.spreadshop-preview/
+/spreadshop/frame-dist/
 /.vercel/
 /node_modules/
 /.env*

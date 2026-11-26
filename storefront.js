@@ -7,6 +7,7 @@
   const content = dialog.querySelector('.drawer-body');
   const {api,element,money,cart:cartStore,favorites:favoriteStore,catalog} = window.slx;
   const products = window.SLX_CATALOG ?? [];
+  const spreadshop = document.querySelector('meta[name="slx-fulfillment"]')?.content === 'spreadshop';
   const productById = new Map(products.map(item => [item.id, item]));
   let source;
   let cartRender = 0;
@@ -70,10 +71,15 @@
 
   function cart(trigger) {
     open('cart', 'Кошик', trigger);
+    if (spreadshop) {
+      content.append(element('p',{className:'muted'},'Кошик і оплата товарів доступні в каталозі Spreadshop.'),
+        element('a',{href:'shop.html#spreadshop',className:'primary'},'Каталог Spreadshop'));
+      return;
+    }
     renderCart();
   }
 
-  const cartCount = () => cartStore.read().reduce((count,row)=>count + row.quantity,0);
+  const cartCount = () => spreadshop ? 0 : cartStore.read().reduce((count,row)=>count + row.quantity,0);
   function badges() {
     const count = cartCount();
     for (const badge of document.querySelectorAll('.cart-count')) {
@@ -296,6 +302,6 @@
   dialog.addEventListener('pointerdown', event => { outside = event.target === dialog; });
   dialog.addEventListener('click', event => { if (outside && event.target === dialog) dialog.close(); });
   dialog.addEventListener('close', () => source?.focus({ preventScroll: true }));
-  window.addEventListener('storage', () => { badges(); if (dialog.open && dialog.dataset.kind==='cart') renderCart(); });
+  window.addEventListener('storage', () => { badges(); if (!spreadshop && dialog.open && dialog.dataset.kind==='cart') renderCart(); });
   badges();
 })();

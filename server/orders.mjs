@@ -4,6 +4,7 @@ import { supabaseConfig } from './supabase.mjs';
 import { calculatePrice, commissionAmount, manufacturerData } from './pricing.mjs';
 import { recordSettlement } from './shared-funds.mjs';
 import { orderEvent } from './telegram.mjs';
+import spreadshop from '../spreadshop/config.cjs';
 
 export const statuses = ['new','availability_check','awaiting_payment','paid','sent_to_manufacturer','in_production','preparing_shipment','shipped','delivered','completed','cancelled','return_requested','returned','defective','unclaimed'];
 export const launchChecks = ['prices_ready','sample_ready','terms_ready','seller_ready','payment_ready','manufacturer_ready'];
@@ -58,7 +59,7 @@ export async function catalog(db) {
 export function readyForSale(config, items, env) {
   const active = items.filter(item => item.status === 'available');
   const { address, authKey } = supabaseConfig(env);
-  return env.SLX_ALLOW_LIVE_ORDERS === '1' && env.VERCEL_ENV === 'production'
+  return !spreadshop.usesSpreadshop(env) && env.SLX_ALLOW_LIVE_ORDERS === '1' && env.VERCEL_ENV === 'production'
     && Boolean(address && authKey) && env.SLX_CUSTOMER_OTP_ENABLED === '1'
     && launchChecks.every(key=>config[key]===true) && active.length > 0
     && active.every(item => item.price > 0 && item.sizes.length > 0 && item.colors.length > 0

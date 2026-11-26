@@ -6,7 +6,8 @@
     "check": "node inventory.cjs",
     "test": "node --test tests/commerce.test.mjs tests/supabase.test.mjs",
     "build": "node build-frontend.cjs",
-    "preview": "npm run build && node serve-preview.cjs"
+    "preview": "npm run build && node serve-preview.cjs",
+    "preview:spreadshop": "node build-frontend.cjs --spreadshop-preview && node serve-preview.cjs --spreadshop-preview"
   },
   "dependencies": {
     "nodemailer": "^10.6.1",

@@ -1,11 +1,15 @@
 import { costKeys } from './orders.mjs';
 import { requireThat } from './security.mjs';
 
-const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(value ?? '')
+export const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(value ?? '')
   && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0,10) === value;
-export async function report(db, mode, from, to) {
+export function validateReportRange(from,to) {
   requireThat(validDate(from) && validDate(to) && from <= to,400,'Вкажіть коректний діапазон дат.');
   requireThat(Date.parse(to) - Date.parse(from) <= 366 * 86400000,400,'Оберіть період не довший за рік.');
+}
+
+export async function report(db, mode, from, to) {
+  validateReportRange(from,to);
   const { rows } = await db.query(`WITH bounds AS (
     SELECT $2::date::timestamp AT TIME ZONE 'Europe/Kyiv' AS start_at, ($3::date+1)::timestamp AT TIME ZONE 'Europe/Kyiv' AS end_at
   ) SELECT id,closed_at,refunded_at,subtotal,advance,financials,resolution,

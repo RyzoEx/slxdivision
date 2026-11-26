@@ -44,8 +44,10 @@
         variants.append(element('label',{},label,select));
       }
       const add = container.querySelector('[data-cart-add]');
-      add.hidden = item.status === 'sold-out';
-      add.textContent = sales && item.status === 'available' ? 'Додати в кошик' : 'До списку покупок';
+      if (add) {
+        add.hidden = item.status === 'sold-out';
+        add.textContent = sales && item.status === 'available' ? 'Додати в кошик' : 'До списку покупок';
+      }
       container.querySelector('[data-notify]').hidden = item.status !== 'coming-soon';
     }
   });

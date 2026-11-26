@@ -257,5 +257,29 @@ test('server-backed auth, protected admin, prelaunch, isolated order pipeline an
     const unsubscribe = new URLSearchParams(new URL(events[0].payload.unsubscribe).hash.slice(1)).get('unsubscribe');
     assert.equal((await request('unsubscribe',{body:{token:unsubscribe}})).status,200);
     assert.equal((await db.query('SELECT status FROM slx_interests')).rows[0].status,'unsubscribed');
+    env.SLX_FULFILLMENT='spreadshop';
+    const beforeProviderSwitch=await request('catalog');
+    assert.equal((await beforeProviderSwitch.json()).sales,false);
+    assert.equal((await request('order',{cookie:buyerCookie,body:{requestId:newId(),items:lines,delivery:{...delivery,termsAccepted:true}}})).status,409);
+    const statement={kind:'credit',currency:'GBP',reference:'TEST-CREDIT-1',day:today,amount:1234};
+    assert.equal((await request('admin-spreadshop-entry',{cookie:buyerCookie,body:statement})).status,403);
+    assert.equal((await request('admin-spreadshop-entry',{cookie:managerCookie,body:statement})).status,200);
+    assert.equal((await request('admin-spreadshop-entry',{cookie:managerCookie,body:statement})).status,200);
+    assert.equal((await request('admin-spreadshop-entry',{cookie:managerCookie,body:{...statement,amount:999}})).status,409);
+    assert.equal((await request('admin-spreadshop-entry',{cookie:ownerCookie,body:{...statement,kind:'adjustment',reference:'TEST-ADJUST',amount:-234}})).status,200);
+    assert.equal((await request('admin-spreadshop-entry',{cookie:ownerCookie,body:{...statement,kind:'payout',currency:'EUR',reference:'TEST-PAYOUT',amount:900}})).status,200);
+    const spreadReport=await (await request(`admin-finance&mode=test&from=${today}&to=${today}`,{cookie:managerCookie})).json();
+    assert.equal(spreadReport.provider,'spreadshop');
+    assert.deepEqual(spreadReport.byCurrency,[
+      {currency:'GBP',credit:1234,adjustment:-234,payout:0,earned:1000},
+      {currency:'EUR',credit:0,adjustment:0,payout:900,earned:0},
+    ]);
+    assert.equal(spreadReport.entries.length,3);
+    const liveProvider=await (await request(`admin-finance&mode=live&from=${today}&to=${today}`,{cookie:managerCookie})).json();
+    assert.equal(liveProvider.entries.length,0);
+    const spreadCsv=await (await request(`admin-finance-csv&mode=test&from=${today}&to=${today}`,{cookie:managerCookie})).text();
+    assert.match(spreadCsv,/credit,GBP,TEST-CREDIT-1,12\.34/);
+    delete env.SLX_FULFILLMENT;
+    assert.ok((await (await request('catalog')).json()).sales);
   } finally { await db.close(); }
 });

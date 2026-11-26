@@ -1,5 +1,6 @@
 const { faqList, socialLinks, escape } = require('./site-shell.cjs');
 const { grid, collectionsPage } = require('./inventory-pages.cjs');
+const { storefront } = require('./spreadshop/storefront.cjs');
 const empty = (text = 'Пока одягу нема') =>
   `<section class="shell empty-page"><p>${escape(text)}</p></section>`;
 function lookbook(collections) {
@@ -12,7 +13,7 @@ function lookbook(collections) {
   </section>`).join('');
 }
 
-module.exports = ({ settings, catalog }) => ({
+module.exports = ({ settings, catalog, spreadshop }) => ({
   'account.html': {
     title: 'Мій кабінет', desc: 'Вхід та історія замовлень SLX.', noindex:true, script:'account.js',
     content: '<section class="shell account-panel" id="slx-account"><p role="status">Завантажуємо кабінет…</p></section>',
@@ -20,7 +21,9 @@ module.exports = ({ settings, catalog }) => ({
   'shop.html': {
     title: 'Shop', seoTitle:'Каталог вуличного одягу',
     desc: 'Вуличний одяг SLX Division. Перегляньте футболки з принтами, кепку та шапку з колекції Heavy DAngels.',
-    content: grid(catalog.activeProducts, { tools: true }),
+    content: spreadshop
+      ? `${storefront(spreadshop)}<h2 class="shell related-title">Дизайни SLX</h2>${grid(catalog.activeProducts,{tools:true})}`
+      : grid(catalog.activeProducts, { tools: true }),
   },
   'collections.html': {
     title: 'Collections', seoTitle:'Колекції вуличного одягу',
@@ -57,12 +60,16 @@ module.exports = ({ settings, catalog }) => ({
   'faq.html': {
     title: 'FAQ', seoTitle:'Часті запитання',
     desc: 'Відповіді на запитання про колекції SLX Division, запуск продажів і сповіщення про наявність.',
-    content: `<section class="shell faq-section">${faqList()}<p><a class="detail-link" href="payment-delivery-returns.html">Оплата, доставка та повернення</a></p></section>`,
+    content: `<section class="shell faq-section">${spreadshop
+      ? '<div class="faq-list"><details><summary>Де оформити замовлення?</summary><p>Товари з каталогу партнера оформлюються через Spreadshop.</p></details><details><summary>У якій валюті вказано ціни?</summary><p>Ціни в каталозі Spreadshop вказані у фунтах стерлінгів (GBP).</p></details><details><summary>Хто доставляє й оформлює повернення?</summary><p>За доставку та повернення відповідає Spreadshop.</p></details></div>'
+      : faqList()}<p><a class="detail-link" href="payment-delivery-returns.html">Оплата, доставка та повернення</a></p></section>`,
   },
   'payment-delivery-returns.html': {
     title: 'Оплата, доставка та повернення',
-    desc: 'Як SLX Division планує виготовляти речі на замовлення, підтверджувати передоплату, відправляти Новою поштою й обробляти повернення.',
-    content: `<p class="shell collection-description">SLX готується до запуску. Остаточні ціни, строки виготовлення та умови опублікуємо до відкриття продажів. Зараз можна підписатися на сповіщення на сторінці виробу.</p>
+    desc: spreadshop ? 'Оформлення, оплата, доставка та повернення для товарів Spreadshop.' : 'Як SLX Division планує виготовляти речі на замовлення, підтверджувати передоплату, відправляти Новою поштою й обробляти повернення.',
+    content: spreadshop ? `<div class="shell story-grid"><article><h2>Оформлення й оплата</h2><p>Товари Spreadshop оформлюються й оплачуються через Spreadshop. Ціни каталогу вказані у фунтах стерлінгів (GBP).</p><a class="detail-link" href="shop.html#spreadshop">Каталог Spreadshop</a></article>
+      <article><h2>Доставка та повернення</h2><p>Доступні країни, строки та вартість доставки визначає Spreadshop під час оформлення. За уточненнями щодо замовлення й повернення звертайтеся до підтримки Spreadshop.</p></article></div>`
+      : `<p class="shell collection-description">SLX готується до запуску. Остаточні ціни, строки виготовлення та умови опублікуємо до відкриття продажів. Зараз можна підписатися на сповіщення на сторінці виробу.</p>
     <div class="shell story-grid">
       <article id="made-to-order"><h2>Як ми працюємо</h2><p>Ви обираєте виріб і розмір та надсилаєте заявку. Ми перевіряємо доступність, остаточну вартість і строк виготовлення. Робота над виробом починається після підтвердження заявки та отримання часткової передоплати.</p></article>
       <article id="payment"><h2>Оплата</h2><p>Під час оформлення заявки кошти не списуються. Перед оплатою ми повідомляємо повну вартість, розмір передоплати й залишок до сплати при отриманні.</p></article>

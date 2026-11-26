@@ -7,6 +7,7 @@ const { header, footer, escape } = require('./site-shell.cjs');
 const editorial = require('./editorial-pages.cjs');
 const { loadInventory } = require('./inventory.cjs');
 const { grid, inventoryPages } = require('./inventory-pages.cjs');
+const { shop, usesSpreadshop, launchApproved } = require('./spreadshop/config.cjs');
 
 const root = realpathSync(__dirname);
 let catalog;
@@ -16,10 +17,14 @@ catch (error) {
   process.exit(1);
 }
 const localPages = process.argv.includes('--local-pages');
-const output = localPages ? root : path.join(root, 'dist');
+const spreadshopPreview = process.argv.includes('--spreadshop-preview');
+if (process.argv.includes('--fangor-preview')) throw new Error('The FANGOR preview is disabled.');
+if (spreadshopPreview && (localPages || process.env.VERCEL)) throw new Error('Spreadshop preview is local only.');
+const folder = spreadshopPreview ? '.spreadshop-preview' : 'dist';
+const output = localPages ? root : path.join(root,folder);
 const vercelEnvironment = process.env.VERCEL_ENV;
 const vercelHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
-const preview = localPages || (vercelEnvironment && vercelEnvironment !== 'production');
+const preview = localPages || spreadshopPreview || (vercelEnvironment && vercelEnvironment !== 'production');
 const requestedOrigin = !preview && (process.env.SLX_SITE_URL
   || (vercelEnvironment === 'production' && vercelHost ? `https://${vercelHost}` : ''));
 const address = requestedOrigin ? new URL(requestedOrigin) : null;
@@ -28,6 +33,13 @@ if (address && (address.protocol !== 'https:' || address.username || address.pas
   throw new Error('SLX_SITE_URL must be an HTTPS origin without a path, credentials, query, or fragment.');
 }
 const origin = address?.origin ?? '';
+const spreadshopEnabled = spreadshopPreview || usesSpreadshop(process.env);
+const approved = vercelEnvironment==='production' && !preview && launchApproved(process.env);
+const spreadshop = spreadshopEnabled ? {
+  preview:spreadshopPreview, approved,
+  frame:spreadshopPreview ? 'http://localhost:4181/' : approved ? `${shop.frameOrigin}/` : null,
+} : null;
+const fulfillmentMeta = spreadshop ? '<meta name="slx-fulfillment" content="spreadshop">' : '';
 const writePage = (name, body) => writeFileSync(path.join(output, name), body);
 const email = process.env.SLX_CONTACT_EMAIL ?? '';
 const settings = {
@@ -51,6 +63,7 @@ if (!localPages) {
   for (const file of ['style.css', 'commerce.css', 'commerce-client.js', 'account.js', 'admin-ui.js', 'intro-start.js', 'metrics.js', 'experience.js', 'metrics.html', '404.html', 'storefront.js', 'catalog-ui.js']) {
     copyFileSync(path.join(root, file), path.join(output, file));
   }
+  if (spreadshop?.frame) copyFileSync(path.join(root,'spreadshop','bridge.js'),path.join(output,'spreadshop-bridge.js'));
   if (origin) {
     for (const file of readdirSync(root, { withFileTypes:true })) {
       if (!file.isFile() || !/^google[0-9a-f]+\.html$/.test(file.name)) continue;
@@ -99,7 +112,7 @@ const homeCanonical = origin
   : '  <meta name="robots" content="noindex">\n';
 const home = readFileSync(path.join(root, 'index.html'), 'utf8')
   .replace(/  <!-- SEO origin start -->[\s\S]*?  <!-- SEO origin end -->/, () =>
-    `  <!-- SEO origin start -->\n${homeCanonical}  ${shareImage()}\n${liveSubscriptions ? `  ${liveSubscriptions}\n` : ''}  <!-- SEO origin end -->`)
+    `  <!-- SEO origin start -->\n${homeCanonical}  ${shareImage()}\n${fulfillmentMeta}\n${liveSubscriptions ? `  ${liveSubscriptions}\n` : ''}  <!-- SEO origin end -->`)
   .replace(/<!-- SITE HEADER START -->[\s\S]*?<!-- SITE HEADER END -->/, () => `<!-- SITE HEADER START -->\n${header(true)}\n<!-- SITE HEADER END -->`)
   .replace(/<!-- SITE FOOTER START -->[\s\S]*?<!-- SITE FOOTER END -->/, () => `<!-- SITE FOOTER START -->\n${footer(settings)}\n<!-- SITE FOOTER END -->`)
   .replace(/<!-- SITE INVENTORY START -->[\s\S]*?<!-- SITE INVENTORY END -->/, () => {
@@ -110,7 +123,7 @@ const home = readFileSync(path.join(root, 'index.html'), 'utf8')
   });
 writePage('index.html', home);
 
-const pages = { ...editorial({ settings, catalog }), ...inventoryPages(catalog) };
+const pages = { ...editorial({ settings, catalog, spreadshop }), ...inventoryPages(catalog,{spreadshop}) };
 
 for (const [file, page] of Object.entries(pages)) {
   const indexable = origin && !page.noindex;
@@ -127,6 +140,7 @@ for (const [file, page] of Object.entries(pages)) {
 <title>${escape(title)}</title><meta name="description" content="${escape(page.desc)}">
 ${indexable ? `<link rel="canonical" href="${url(file)}">\n<meta property="og:url" content="${url(file)}">` : '<meta name="robots" content="noindex">'}
 ${liveSubscriptions}
+${fulfillmentMeta}
 <meta property="og:type" content="website">
 <meta property="og:locale" content="uk_UA">
 <meta property="og:site_name" content="SLX Division">
@@ -137,6 +151,7 @@ ${indexable && breadcrumbs ? breadcrumbs : ''}
 <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="commerce.css"><link rel="icon" href="/assets/brand/favicon.png" sizes="96x96" type="image/png">
 <script src="catalog-index.js" defer></script><script src="commerce-client.js" defer></script><script src="metrics.js" defer></script><script src="storefront.js" defer></script><script src="catalog-ui.js" defer></script>
 ${page.script ? `<script src="${page.script}" defer></script>` : ''}
+${file==='shop.html' && spreadshop?.frame ? '<script src="/spreadshop-bridge.js" defer></script>' : ''}
 </head>
 <body id="top" class="editorial-page">
 ${header()}

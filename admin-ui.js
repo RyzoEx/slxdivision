@@ -81,7 +81,8 @@
     return node;
   }
   function dashboard(data) {
-    return [note(data.sales ? 'LIVE · Приймаємо заявки без списання коштів.' : 'PRE-LAUNCH · Прийом робочих заявок вимкнено.'),
+    return [note(data.fulfillment==='spreadshop' ? 'Spreadshop · Оформлення замовлень і оплату веде партнер.'
+      : data.sales ? 'LIVE · Приймаємо заявки без списання коштів.' : 'PRE-LAUNCH · Прийом робочих заявок вимкнено.'),
       note(data.telegramReady ? 'Telegram підключено.' : 'Telegram очікує налаштування.'),
       card(heading('Каталог'),h('p',{},`Речей: ${data.products}`)),
       card(heading('Замовлення'),...(data.counts.length ? data.counts.map(row=>h('p',{},`${orderStatus[row.status]} · ${row.count}`)) : [note('Ще немає замовлень.')]))];
@@ -273,7 +274,12 @@
     const result = h('div',{className:'ops-results'});
     const labels = {revenue:'Виручка',refunds:'Повернення',...cost,referrals:'SLX Circle',profit:'Прибуток'};
     async function refresh(range) {
-      const [data,fund]=await Promise.all([read('admin-finance',range),read('admin-funds')]);
+      const data=await read('admin-finance',range);
+      if (data.provider==='spreadshop') {
+        result.replaceChildren(spreadshopFinance(data,()=>refresh(range)));
+        return;
+      }
+      const fund=await read('admin-funds');
       result.replaceChildren(balanceCard(fund,()=>refresh(range)),card(heading('Звіт за період'),
         h('dl',{className:'finance-grid'},Object.entries(labels).map(([key,label])=>h('div',{},h('dt',{},label),h('dd',{},money(data.totals[key]))))),
         h('a',{className:'secondary',href:endpoint('admin-finance-csv',{mode,...range})},'Завантажити CSV')));
@@ -281,6 +287,30 @@
     refresh({from,to}).catch(unauthorized);
     return [form([field('Від','from',from,{type:'date',required:true}),field('До','to',to,{type:'date',required:true})],
       h('button',{type:'submit',className:'primary'},'Застосувати'),refresh,{refresh:false}),result];
+  }
+  function spreadshopFinance(data,refresh) {
+    const labels={credit:'Нарахована маржа',adjustment:'Коригування',payout:'Фактична виплата'};
+    const format=(amount,currency)=>new Intl.NumberFormat('uk-UA',{style:'currency',currency}).format(Number(amount)/100);
+    const currencies=data.byCurrency.map(({currency})=>[currency,currency]);
+    return card(heading('Фінанси Spreadshop'),
+      note('Записуйте фактичні нарахування й виплати за звітами Spreadshop. Валюти показано окремо.'),
+      ...data.byCurrency.map(row=>h('section',{className:'ops-card'},heading(row.currency),
+        h('dl',{className:'finance-grid'},Object.entries({...labels,earned:'Маржа після коригувань'}).map(([key,label])=>
+          h('div',{},h('dt',{},label),h('dd',{},format(row[key],row.currency))))))),
+      h('details',{},h('summary',{},'Додати запис'),form([
+        choose('Тип','kind',Object.entries(labels),'credit'),
+        choose('Валюта','currency',currencies,'GBP'),
+        field('Дата звіту','day',data.to,{type:'date',required:true}),
+        field('Номер документа','reference','',{required:true,maxLength:80}),
+        field('Сума','amount','',{type:'number',step:.01,required:true}),
+      ],summary(),async values=>{
+        await post('admin-spreadshop-entry',{...values,amount:toMinor(values.amount)});
+        await refresh();
+      },{refresh:false})),
+      heading('Записи за період'),
+      data.entries.length ? h('ul',{className:'ops-timeline'},data.entries.map(entry=>h('li',{},
+        `${entry.day} · ${labels[entry.kind]} · ${entry.reference} · ${format(entry.amount,entry.currency)}`))) : note('Записів за цей період немає.'),
+      h('a',{className:'secondary',href:endpoint('admin-finance-csv',{mode,from:data.from,to:data.to})},'Завантажити CSV'));
   }
   function balanceCard(fund,refresh) {
     const pockets=[['available','Вільний залишок'],['reserve','Резерв'],['fund','Relocation Fund']];

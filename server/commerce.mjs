@@ -8,6 +8,8 @@ import { funds, transferFunds } from './shared-funds.mjs';
 import { cronAuthorized, dailyDigest, deliverTelegram, telegramReady } from './telegram.mjs';
 import { interest, notifyLaunch, unsubscribe } from './interests.mjs';
 import { launchMailReady } from './launch-mail.mjs';
+import spreadshop from '../spreadshop/config.cjs';
+import { recordSpreadshopEntry, spreadshopCsv, spreadshopReport } from './spreadshop-finance.mjs';
 import { currentUser, Failure, isAdmin, newId, readJson, requireThat, text, throttle } from './security.mjs';
 
 const baseHeaders = { 'Cache-Control':'no-store','X-Robots-Tag':'noindex','X-Content-Type-Options':'nosniff' };
@@ -30,6 +32,7 @@ function adminMetadata(user, config, items, env, auth) {
   return {
     user, statuses, sales:config.sales && readyForSale(config,items,env), modeReady:readyForSale(config,items,env),
     storageReady:auth.storageReady, canNotify:launchMailReady(env),
+    fulfillment:spreadshop.usesSpreadshop(env) ? 'spreadshop' : 'direct',
     telegramReady:telegramReady(env),
   };
 }
@@ -132,8 +135,11 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       }
       if (['admin-finance','admin-finance-csv'].includes(op) && get) {
         requireThat(manager(user),403,'Недостатньо прав.');
-        const data = await report(db,mode,url.searchParams.get('from'),url.searchParams.get('to'));
-        return op==='admin-finance' ? json(data) : new Response(csv(data),{headers:{...baseHeaders,
+        const from=url.searchParams.get('from'), to=url.searchParams.get('to');
+        const exportRows=op==='admin-finance-csv';
+        const usesSpreadshop=spreadshop.usesSpreadshop(env);
+        const data = usesSpreadshop ? await spreadshopReport(db,mode,from,to,{exportRows}) : await report(db,mode,from,to);
+        return op==='admin-finance' ? json(data) : new Response(usesSpreadshop ? spreadshopCsv(data) : csv(data),{headers:{...baseHeaders,
           'Content-Type':'text/csv; charset=utf-8','Content-Disposition':`attachment; filename=slx-${mode}-${data.from}-${data.to}.csv`}});
       }
       if (op === 'admin-referrals' && get) {
@@ -161,11 +167,16 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       if (op==='interest') { await interest(db,data,ip); return json({ok:true},201); }
       if (op==='unsubscribe') { await unsubscribe(db,data.token); return json({ok:true}); }
       if (op==='order') {
+        requireThat(!spreadshop.usesSpreadshop(env),409,'Оформлення товарів доступне через Spreadshop.');
         requireThat(user?.role==='customer',401,'Підтвердьте вхід у кабінет покупця.');
         await throttle(db,`order-user:${user.id}`,18,15);
         const result=await createOrder(db,user,'live',data,env);
         await deliverTelegram(db,env,fetcher);
         return json(result,201);
+      }
+      if (op==='admin-spreadshop-entry') {
+        requireThat(manager(user) && spreadshop.usesSpreadshop(env),403,'Потрібен доступ до фінансів Spreadshop.');
+        return json(await recordSpreadshopEntry(db,user,mode,data));
       }
       if (op==='order-return') {
         requireThat(user?.role==='customer',401,'Підтвердьте вхід у кабінет покупця.');

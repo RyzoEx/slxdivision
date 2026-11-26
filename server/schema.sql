@@ -84,6 +84,18 @@ CREATE TABLE IF NOT EXISTS slx_telegram_outbox (
   claimed_at timestamptz,
   sent_at timestamptz
 );
+CREATE TABLE IF NOT EXISTS slx_spreadshop_entries (
+  mode text NOT NULL CHECK(mode IN ('test','live')),
+  kind text NOT NULL CHECK(kind IN ('credit','adjustment','payout')),
+  currency text NOT NULL CHECK(currency IN ('GBP','EUR')),
+  reference text NOT NULL,
+  day date NOT NULL,
+  amount bigint NOT NULL CHECK(amount <> 0 AND (kind = 'adjustment' OR amount > 0)),
+  actor_id uuid REFERENCES slx_users(id),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY(mode,kind,currency,reference)
+);
+CREATE INDEX IF NOT EXISTS slx_spreadshop_entries_day ON slx_spreadshop_entries(mode,day DESC);
 CREATE INDEX IF NOT EXISTS slx_orders_mode_created ON slx_orders(mode,created_at DESC);
 CREATE INDEX IF NOT EXISTS slx_orders_user ON slx_orders(user_id,mode);
 CREATE TABLE IF NOT EXISTS slx_order_events (
@@ -134,3 +146,4 @@ ALTER TABLE slx_audit ENABLE ROW LEVEL SECURITY;
 ALTER TABLE slx_manufacturers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE slx_balance_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE slx_telegram_outbox ENABLE ROW LEVEL SECURITY;
+ALTER TABLE slx_spreadshop_entries ENABLE ROW LEVEL SECURITY;
