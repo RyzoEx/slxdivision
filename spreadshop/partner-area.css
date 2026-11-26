@@ -10,6 +10,8 @@
 /* Shop chrome can be a sibling of the catalog rather than a descendant. */
 :is(.SprdMain, #sprd-container, #sprd-content, .sprd--standalone, .sprd–standalone,
     .sprd-header, .sprd-navigation__nav-bar, .sprd-info-footer, .sprd-footer,
+    body:has(.sprd-navigation__nav-bar)
+      :is(main, [role="main"]):not(dialog *, [role="dialog"] *),
     body:has(#sprd-content, .sprd-startpage-teaser, .sprd-navigation__nav-bar)
       :is(header, footer, [role="banner"], [role="contentinfo"]):not(main *, article *, dialog *)) {
   color-scheme: dark;
@@ -40,13 +42,23 @@
 /* Set text on known dark sections. Control color pairs are defined below. */
 :is(#sprd-content, .SprdMain, #sprd-container, .sprd-header, .sprd-navigation__nav-bar, .sprd-info-footer, .sprd-footer,
     .sprd-department-filter__menu, .sprd-language-switch__languages,
+    body:has(.sprd-navigation__nav-bar) :is(main, [role="main"]):not(dialog *, [role="dialog"] *),
     body:has(#sprd-content, .sprd-startpage-teaser, .sprd-navigation__nav-bar, [data-spreadshop-mount])
       :is(header, footer, [role="banner"], [role="contentinfo"], dialog, [role="dialog"],
           [role="alertdialog"], [role="menu"], [role="listbox"]))
   :where(h1, h2, h3, h4, h5, h6, [role="heading"], legend, label, p, [role="status"], [role="alert"],
     a[href]:not(.sprd-button, [role="button"], [role="menuitem"], [role="option"]),
     .sprd-breadcrumb, .sprd-navigation-header__tab, .sprd-department-filter__button) {
-  color: var(--slx-paper) !important;
+  color: var(--slx-control-ink, var(--slx-paper)) !important;
+}
+
+/* A newer catalog can live beside the navigation without a #sprd-content ID. */
+body:has(.sprd-navigation__nav-bar) :is(main, [role="main"])
+  :is([aria-live], [aria-live] :where(span, strong, small),
+      nav[aria-label*="breadcrumb" i] :where(li, span),
+      fieldset :where(label, legend),
+      :where(div, span, strong, small, li):is(.text-primary, .text-black)) {
+  color: var(--slx-control-ink, var(--slx-paper)) !important;
 }
 
 :is(#sprd-content, .SprdMain, #sprd-container) :is(.sprd-breadcrumb, [aria-label*="breadcrumb" i]) a,
@@ -89,6 +101,7 @@ body:has(#sprd-content, .sprd-startpage-teaser, .sprd-navigation__nav-bar)
 
 /* Pair a control's actual background and ink. Descendant labels share its ink. */
 :is(#sprd-content, .SprdMain, #sprd-container, .sprd-header, .sprd-navigation__nav-bar, .sprd-info-footer, .sprd-footer,
+    body:has(.sprd-navigation__nav-bar) :is(main, [role="main"]):not(dialog *, [role="dialog"] *),
     body:has(#sprd-content, .sprd-startpage-teaser, .sprd-navigation__nav-bar, [data-spreadshop-mount])
       :is(header, footer, [role="banner"], [role="contentinfo"], dialog, [role="dialog"],
           [role="alertdialog"], [role="menu"], [role="listbox"]))
@@ -158,6 +171,7 @@ body:has(#sprd-content, .sprd-navigation__nav-bar) .sprd-navigation__nav-bar :is
 }
 
 :is(#sprd-content, .SprdMain, #sprd-container,
+    body:has(.sprd-navigation__nav-bar) :is(main, [role="main"]):not(dialog *, [role="dialog"] *),
     body:has(#sprd-content, .sprd-startpage-teaser, .sprd-navigation__nav-bar, [data-spreadshop-mount])
       :is(dialog, [role="dialog"], [role="alertdialog"], [role="menu"]))
   :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="image"]),
