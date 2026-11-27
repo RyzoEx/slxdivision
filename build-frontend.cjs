@@ -7,7 +7,8 @@ const { header, footer, escape } = require('./site-shell.cjs');
 const editorial = require('./editorial-pages.cjs');
 const { loadInventory } = require('./inventory.cjs');
 const { inventoryPages } = require('./inventory-pages.cjs');
-const { shop, usesSpreadshop, launchApproved } = require('./spreadshop/config.cjs');
+const { usesSpreadshop } = require('./spreadshop/config.cjs');
+const { fulfillmentAdapter, fourthwallPreview } = require('./fulfillment/adapters.cjs');
 const homeDrop = require('./home-drop.cjs');
 const storefrontSettings = require('./content/storefront.json');
 const { transformSync } = require('esbuild');
@@ -23,9 +24,11 @@ catch (error) {
 const localPages = process.argv.includes('--local-pages');
 const spreadshopPreview = process.argv.includes('--spreadshop-preview');
 const localAdmin = process.argv.includes('--local-admin');
+const fourthwall = !localPages && fourthwallPreview(process.env,process.argv.includes('--fourthwall-preview'));
 if (process.argv.includes('--fangor-preview')) throw new Error('The FANGOR preview is disabled.');
 if (spreadshopPreview && (localPages || process.env.VERCEL)) throw new Error('Spreadshop preview is local only.');
-const folder = spreadshopPreview ? '.spreadshop-preview' : 'dist';
+const folder = spreadshopPreview ? '.spreadshop-preview'
+  : fourthwall && !process.env.VERCEL_ENV ? '.fourthwall-preview' : 'dist';
 const output = localPages ? root : path.join(root,folder);
 const storefrontStyles = localPages
   ? separateStyles.map(file=>`<link rel="stylesheet" href="/${file}">`).join('')
@@ -44,10 +47,11 @@ const origin = address?.origin ?? '';
 const spreadshopEnabled = spreadshopPreview || usesSpreadshop(process.env)
   || (vercelEnvironment === 'production' && origin === 'https://slxdivision.vercel.app')
   || (vercelEnvironment === 'preview' && ['codex/spreadshop','codex/backend-infrastructure'].includes(process.env.VERCEL_GIT_COMMIT_REF));
-const approved = vercelEnvironment==='production' && !preview && launchApproved(process.env);
+const spreadshopAdapter = fulfillmentAdapter('spreadshop');
+const approved = vercelEnvironment==='production' && !preview && spreadshopAdapter.launchApproved;
 const spreadshop = spreadshopEnabled ? {
   preview:spreadshopPreview,
-  frame:approved ? `${shop.frameOrigin}/`
+  frame:approved ? `${spreadshopAdapter.shop.frameOrigin}/`
     : spreadshopPreview && process.env.SLX_SPREADSHOP_PREVIEW_CATALOG==='1' ? 'http://localhost:4181/' : null,
 } : null;
 const fulfillmentMeta = spreadshop ? '<meta name="slx-fulfillment" content="spreadshop">' : '';
@@ -95,6 +99,7 @@ if (!localPages) {
   mkdirSync(path.join(output,'assets','admin'),{recursive:true});
   for (const file of ['lucide.svg','LICENSE-Lucide.txt']) copyFileSync(path.join(root,'assets','admin',file),path.join(output,'assets','admin',file));
   const combined = separateStyles.map(file=>readFileSync(path.join(root,file),'utf8')).join('\n');
+  if (fourthwall) writePage('fourthwall-preview.js',transformSync(readFileSync(path.join(root,'fulfillment','preview.js'),'utf8'),{loader:'js',minify:true}).code);
   writePage('site.css',transformSync(combined,{loader:'css',minify:true,legalComments:'none'}).code);
   if (spreadshop?.frame) copyFileSync(path.join(root,'spreadshop','bridge.js'),path.join(output,'spreadshop-bridge.js'));
   if (origin) {
@@ -161,6 +166,7 @@ const home = readFileSync(path.join(root, 'index.html'), 'utf8')
 writePage('index.html', home);
 
 const pages = { ...editorial({ settings, catalog, spreadshop }), ...inventoryPages(catalog,{spreadshop}) };
+if (fourthwall) pages['fourthwall-preview.html'] = require('./fulfillment/preview-page.cjs');
 
 for (const [file, page] of Object.entries(pages)) {
   const indexable = origin && !page.noindex;

@@ -8,11 +8,12 @@ const config = require('./vercel.json');
 if (process.argv.includes('--fangor-preview')) throw new Error('The FANGOR preview is disabled.');
 const spreadshopPreview = process.argv.includes('--spreadshop-preview');
 const localAdmin = process.argv.includes('--local-admin');
+const fourthwall = process.argv.includes('--fourthwall-preview');
 const localEnv = path.join(__dirname,'.env.local');
 if (!spreadshopPreview && !localAdmin && existsSync(localEnv)) process.loadEnvFile(localEnv);
 
-const output = path.join(__dirname, spreadshopPreview ? '.spreadshop-preview' : 'dist');
-const port = Number(process.env.PORT || (spreadshopPreview ? 4180 : 4173));
+const output = path.join(__dirname, spreadshopPreview ? '.spreadshop-preview' : fourthwall ? '.fourthwall-preview' : 'dist');
+const port = Number(process.env.PORT || (spreadshopPreview ? 4180 : fourthwall ? 4198 : 4173));
 const api = Promise.all([import('./server/commerce.mjs'),import('./server/db.mjs'),import('./server/preview-auth.mjs')])
   .then(async ([{commerce},{previewDatabase},{previewAuth,provisionPreviewStaff}])=>{
     if (localAdmin) {
@@ -28,6 +29,8 @@ const api = Promise.all([import('./server/commerce.mjs'),import('./server/db.mjs
     return commerce({db,auth:previewAuth(db),local:true,env:{...process.env,VERCEL_ENV:'preview',
       ...(spreadshopPreview ? {SLX_FULFILLMENT:'spreadshop'} : {})}});
   });
+const fourthwallApi = fourthwall && import('./api/fourthwall-preview.mjs')
+  .then(({fourthwallPreviewHandler})=>fourthwallPreviewHandler(process.env,{local:true}));
 const types = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8', '.webp': 'image/webp', '.jpg': 'image/jpeg',
@@ -59,7 +62,7 @@ http.createServer(async (request, response) => {
   }
   const filename = requestPath === '/' ? 'index.html' : requestPath.slice(1);
   const headers = headersFor(requestPath);
-  if (requestPath==='/admin' || requestPath==='/api/commerce') {
+  if (requestPath==='/admin' || requestPath==='/api/commerce' || (fourthwall && requestPath==='/api/fourthwall-preview')) {
     try {
       const host = request.headers.host;
       if (!/^(?:127\.0\.0\.1|localhost)(?::\d+)?$/.test(host ?? '')) {
@@ -71,7 +74,8 @@ http.createServer(async (request, response) => {
         init.body = Readable.toWeb(request);
         init.duplex = 'half';
       }
-      const result = await (await api)(new Request(new URL(request.url,`http://${host}`),init));
+      const handler = await (requestPath==='/api/fourthwall-preview' ? fourthwallApi : api);
+      const result = await handler(new Request(new URL(request.url,`http://${host}`),init));
       response.writeHead(result.status,{...headers,...Object.fromEntries(result.headers)});
       if (result.body) Readable.fromWeb(result.body).pipe(response);
       else response.end();

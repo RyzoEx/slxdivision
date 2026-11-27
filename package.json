@@ -9,7 +9,8 @@
     "build": "node build-frontend.cjs",
     "preview": "npm run build && node serve-preview.cjs",
     "preview:admin": "node build-frontend.cjs --local-admin && node serve-preview.cjs --local-admin",
-    "preview:spreadshop": "node build-frontend.cjs --spreadshop-preview && node serve-preview.cjs --spreadshop-preview"
+    "preview:spreadshop": "node build-frontend.cjs --spreadshop-preview && node serve-preview.cjs --spreadshop-preview",
+    "preview:fourthwall": "node build-frontend.cjs --fourthwall-preview && node serve-preview.cjs --fourthwall-preview"
   },
   "dependencies": {
     "nodemailer": "^10.6.1",

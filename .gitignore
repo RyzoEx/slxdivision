@@ -1,6 +1,7 @@
 /dist/
 /.fangor-preview/
 /.spreadshop-preview/
+/.fourthwall-preview/
 /spreadshop/frame-dist/
 /.vercel/
 /node_modules/
