@@ -19,6 +19,7 @@
   const topbar = document.querySelector('#admin-topbar');
   const mobileNav = document.querySelector('#admin-mobile-nav');
   const consoleLayout = document.querySelector('#admin-dashboard');
+  if (!consoleLayout) return;
   const message = document.querySelector('#admin-message');
   const dt = new Intl.DateTimeFormat('uk-UA',{dateStyle:'short',timeStyle:'short',timeZone:'Europe/Kyiv'});
   const ymd = new Intl.DateTimeFormat('sv-SE',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'Europe/Kyiv'});

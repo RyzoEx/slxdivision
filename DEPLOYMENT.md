@@ -1,5 +1,15 @@
 # Deployment
 
+## Phase 7 and 7.1 production preflight
+
+The production database still has the earlier role constraint and is missing the consent columns and management tables required by this release. Keep `main` at the current deployment until the database upgrade and test-data decision are complete. The local regression test reconstructs the observed legacy schema and applies `server/schema.sql` twice with representative existing accounts, sessions, subscriptions, settings and orders. Existing records stay intact. New consent columns on legacy records remain unset.
+
+1. With separate production maintenance approval, take a verified private-schema backup following [DATABASE_SETUP.md](DATABASE_SETUP.md). Use a direct or session-mode PostgreSQL connection with certificate and hostname verification. Confirm that `SLX_DATABASE_URL` targets the intended production project. Check active accounts, store configuration and existing record counts without exporting personal data to logs.
+2. Apply the schema with `node --env-file=.env.local server/setup.mjs migrate`. Use the reviewed branch checkout and a locally ignored environment file. The migration takes table locks and runs as one transaction. Confirm the expanded role constraint, all four consent columns, the private management tables and row-level security. Compare pre- and post-migration account, subscriber and order counts. Check the existing `/admin` entry point with the designated team account.
+3. An existing test-mode order was detected in Production. Review and approve a separate data disposition. Keep the record and its dependent data intact until that decision. The candidate rejects creating additional test orders on Production and the existing live reports omit test orders.
+4. Keep `SLX_LAUNCH_SIGNUP_READY`, `SLX_LAUNCH_MAIL_APPROVED`, `SLX_ALLOW_LIVE_ORDERS`, `SLX_ALLOW_MANUAL_PREPAYMENT`, `SLX_SPREADSHOP_LAUNCH_APPROVED`, `SLX_SPREADSHOP_PAYOUT_VERIFIED`, `SLX_SPREADSHOP_ELIGIBILITY_VERIFIED` and `SLX_GA_STREAM_READY` unset. Obtain explicit merge approval only after these checks.
+5. After the approved deployment, verify the production hostname, team sign-in and the management views, COMING SOON, and `sales:false` in the public catalogue. On a rollback, use the prior application deployment and keep the compatible database additions. Do not reverse the role constraint against existing Editor or Analyst accounts or restore an older dump over current data.
+
 1. Run `npm ci`, `npm test`, `npm run test:e2e` and `npm run build`. Desktop and mobile screenshots can be saved with `SLX_TEST_SCREENSHOTS`.
 2. Push `codex/backend-infrastructure`. Confirm the corresponding Vercel build is Ready and targets Preview. Use its deployment URL. Changing the existing public share URL requires separate approval.
 3. Check noindex and COMING SOON across the homepage and shop, production sales off, Spreadshop iframe absent and Google tag absent. A database-free preview should keep signup controls hidden while the public pages still load.

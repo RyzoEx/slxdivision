@@ -19,6 +19,14 @@ const baseHeaders = { 'Cache-Control':'no-store','X-Robots-Tag':'noindex','X-Con
 function json(data, status = 200, headers = {}) {
   return Response.json(data,{status,headers:{...baseHeaders,...headers}});
 }
+function adminResponse(authenticated, status, unavailable=false) {
+  return new Response(adminPage(authenticated,unavailable),{status,headers:{...baseHeaders,'Content-Type':'text/html; charset=utf-8',
+    'Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; media-src 'self'; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'",
+    ...(unavailable ? {'Retry-After':'30'} : {})}});
+}
+const unavailableDatabaseCodes = new Set(['42P01','42703','3F000','ECONNREFUSED','ECONNRESET','ETIMEDOUT','ENOTFOUND','EAI_AGAIN','57P01','53300']);
+const catalogFallback = () => json({ready:false,sales:false,products:[]});
+const contentFallback = () => json({collections:[],social:null});
 const manager = user => user && ['owner','manager'].includes(user.role);
 const editor = user => manager(user) || user?.role==='editor';
 const editorialRoutes = new Set(['admin-summary','admin-system','admin-collections','admin-collection','admin-social','admin-content','admin-content-save','admin-media','admin-media-validate']);
@@ -53,8 +61,9 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
     const origin = url.origin;
     const secure = !local || url.protocol === 'https:';
     try {
-      if (op === 'catalog' && get && !db) return json({ready:false,sales:false,products:[]});
-      if (op === 'store-content' && get && !db) return json({collections:[],social:null});
+      if (op === 'catalog' && get && !db) return catalogFallback();
+      if (op === 'store-content' && get && !db) return contentFallback();
+      if (op === 'admin-page' && get && !db) return adminResponse(false,503,true);
       if (op==='telegram-cron') {
         requireThat(get && cronAuthorized(env,request.headers.get('authorization')),401,'Потрібна авторизація.');
         if (!db || !telegramReady(env)) return json({configured:false});
@@ -68,11 +77,7 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
         return json({social,collections:collections.map(({id,name,description,hidden})=>({id,name,description,hidden}))});
       }
       if (op === 'admin-page' && get) {
-        return new Response(adminPage(isAdmin(user)),{
-          status:user && !isAdmin(user) ? 403 : 200,
-          headers:{...baseHeaders,'Content-Type':'text/html; charset=utf-8',
-            'Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; media-src 'self'; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'"},
-        });
+        return adminResponse(isAdmin(user),user && !isAdmin(user) ? 403 : 200);
       }
       if (op === 'catalog' && get) {
         const [config,products] = await Promise.all([settings(db),catalog(db)]);
@@ -176,11 +181,12 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
           'Content-Disposition':'attachment; filename=slx-subscribers.csv'}}) : json(result);
       }
       if (['admin-orders','admin-manufacturing'].includes(op) && get) {
-        const items=mode==='test' && manager(user) || mode==='live' && env.SLX_ALLOW_MANUAL_PREPAYMENT==='1' ? await catalog(db) : [];
+        const allowTestOrders=mode==='test' && manager(user) && env.VERCEL_ENV!=='production';
+        const items=allowTestOrders || mode==='live' && env.SLX_ALLOW_MANUAL_PREPAYMENT==='1' ? await catalog(db) : [];
         const allowManual=mode==='live' && items.length>0 && manualPrepaymentAllowed(await settings(db),items,env);
         const [orders,partners]=await Promise.all([listOrders(db,mode,allowManual),manufacturers(db)]);
         return json({orders:orders.map(order=>exposeOrder(order,user)),manufacturers:partners.map(({id,name})=>({id,name})),
-          ...(mode==='test' && manager(user) ? {products:items} : {})});
+          ...(allowTestOrders ? {products:items} : {})});
       }
       if (op === 'admin-customers' && get) {
         requireThat(manager(user),403,'Недостатньо прав.');
@@ -250,6 +256,7 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
       }
       if (op==='admin-test-order') {
         requireThat(manager(user) && mode==='test',403,'Тестові замовлення доступні лише команді в тестовому режимі.');
+        requireThat(env.VERCEL_ENV!=='production',409,'Створюйте тестові замовлення в Preview або локально.');
         return json(await createOrder(db,user,'test',data,env),201);
       }
       if (op==='admin-order') {
@@ -332,8 +339,11 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
     } catch (error) {
       if (error instanceof Failure) return json({error:error.message},error.status);
       console.error('SLX commerce:',error.code ?? error.name);
+      if (get && op==='catalog') return catalogFallback();
+      if (get && op==='store-content') return contentFallback();
+      if (get && op==='admin-page') return adminResponse(false,503,true);
       if (op==='interest') return json({error:'Підписку не збережено. Спробуйте пізніше.'},503);
-      return json({error:'Тимчасово недоступно. Повторіть пізніше.'},['42P01','3F000','ECONNREFUSED'].includes(error.code) ? 503 : 500);
+      return json({error:'Тимчасово недоступно. Повторіть пізніше.'},unavailableDatabaseCodes.has(error.code) || error.code?.startsWith('08') ? 503 : 500);
     }
   };
 }

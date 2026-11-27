@@ -5,7 +5,7 @@ import {databaseTarget,previewDatabase,migrate} from '../server/db.mjs';
 import {readFile} from 'node:fs/promises';
 import {commerce} from '../server/commerce.mjs';
 import {previewAuth,provisionPreviewStaff} from '../server/preview-auth.mjs';
-import {emailAddress,hashToken,token} from '../server/security.mjs';
+import {emailAddress,hashToken,token,newId,createSession} from '../server/security.mjs';
 import {launchTemplate} from '../server/launch-mail.mjs';
 import {productsSource} from '../server/orders.mjs';
 
@@ -23,6 +23,72 @@ test('email validation and launch template',()=>{
   assert.equal(emailAddress(' SLX+drop@Example.Test '),'slx+drop@example.test');
   for (const value of ['a..b@slx.test','a@a-.test','a@x.test@x.test','a@x.test\r\nBcc:','a@invalid']) assert.throws(()=>emailAddress(value));
   assert.match(launchTemplate({url:'https://slx.test/?x=1&y=2',unsubscribe:'https://slx.test/unsubscribe'},'<Print>'), /&lt;Print&gt;[\s\S]*x=1&amp;y=2/);
+});
+
+test('legacy production schema upgrades without changing account, session or subscriber records',async t=>{
+  const db=await memoryDatabase();
+  t.after(()=>db.close());
+  await db.transaction(tx=>tx.exec(`SET LOCAL search_path TO slx_private, pg_catalog;
+    DROP TABLE slx_preview_credentials,slx_store_content,slx_editorial_drafts,slx_mail_previews,slx_spreadshop_entries;
+    ALTER TABLE slx_interests DROP COLUMN consent_at,DROP COLUMN consent_version,DROP COLUMN marketing_at,DROP COLUMN withdrawn_at;
+    ALTER TABLE slx_users DROP CONSTRAINT slx_users_role_check, ADD CONSTRAINT slx_users_role_check
+      CHECK(role IN ('owner','manager','operator','customer'));`));
+  const owner={id:newId(),email:'owner@example.test',role:'owner'};
+  const manager={id:newId(),email:'manager@example.test',role:'manager'};
+  await db.query("INSERT INTO slx_users(id,email,role) VALUES ($1,$2,'owner'),($3,$4,'manager')",[owner.id,owner.email,manager.id,manager.email]);
+  const existingCookie=(await createSession(db,owner,true)).split(';')[0];
+  const subscriberId=newId(), orderId=newId();
+  await db.query("INSERT INTO slx_interests(id,email,product,delivery_key,unsubscribe_hash,status) VALUES ($1,'legacy@example.test','newsletter',$1,$2,'pending')",[subscriberId,hashToken(token())]);
+  await db.query("INSERT INTO slx_orders(id,mode,status,items,delivery) VALUES ($1,'test','new','[]','{}')",[orderId]);
+  const snapshot=async()=>Object.fromEntries(await Promise.all(['slx_users','slx_sessions','slx_interests','slx_orders','slx_settings'].map(async name=>[
+    name,(await db.query(`SELECT * FROM ${name} ORDER BY 1`)).rows.map(({consent_at,consent_version,marketing_at,withdrawn_at,...row})=>row),
+  ])));
+  const before=await snapshot();
+  await migrate(db);
+  await migrate(db);
+  assert.deepEqual(await snapshot(),before);
+  assert.deepEqual((await db.query('SELECT consent_at,consent_version,marketing_at,withdrawn_at FROM slx_interests WHERE id=$1',[subscriberId])).rows[0],
+    {consent_at:null,consent_version:null,marketing_at:null,withdrawn_at:null});
+  const auth={storageReady:false,password:async email=>email===manager.email?{...manager,email_confirmed_at:'2026-01-01'}:null};
+  const env={VERCEL_ENV:'production',VERCEL:'1'};
+  const api=commerce({db,auth,env});
+  const origin='https://slx.example.test';
+  const request=(op,{body,cookie=existingCookie}={})=>api(new Request(`${origin}/api/commerce?op=${op}`,{
+    method:body?'POST':'GET',headers:{cookie,...(body?{origin,'content-type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,
+  }));
+  const summary=await request('admin-summary&mode=live');
+  assert.equal(summary.status,200);
+  assert.equal((await summary.json()).user.id,owner.id);
+  const login=await request('login',{body:{email:manager.email,password:'test-only password'}});
+  assert.equal(login.status,200);
+  assert.match(login.headers.get('set-cookie'),/^__Host-slx_session=.*HttpOnly; SameSite=Lax; Max-Age=28800; Secure$/);
+  assert.equal((await request('admin-content',{cookie:login.headers.get('set-cookie').split(';')[0]})).status,200);
+  assert.equal((await request('admin-test-order&mode=test',{body:{}})).status,409);
+  assert.equal((await request('admin-orders&mode=live').then(response=>response.json())).orders.length,0);
+  assert.equal((await request('admin-notify&mode=live',{body:{}})).status,409);
+  assert.equal((await request('interest',{body:{}})).status,503);
+});
+
+test('database outages keep static storefront data usable and fail closed for administration',async()=>{
+  const unavailable={query:async()=>{throw Object.assign(new Error('test-only outage'),{code:'ECONNRESET'});}};
+  for (const db of [null,unavailable]) {
+    const api=commerce({db,auth:{},env:{VERCEL_ENV:'production'}});
+    const origin='https://slx.example.test';
+    const cookie=`__Host-slx_session=${token()}`;
+    const request=path=>api(new Request(`${origin}${path}`,{headers:{cookie}}));
+    assert.deepEqual(await (await request('/api/commerce?op=catalog')).json(),{ready:false,sales:false,products:[]});
+    assert.deepEqual(await (await request('/api/commerce?op=store-content')).json(),{collections:[],social:null});
+    const admin=await request('/admin');
+    assert.equal(admin.status,503);
+    assert.equal(admin.headers.get('retry-after'),'30');
+    assert.match(admin.headers.get('cache-control'),/no-store/);
+    const html=await admin.text();
+    assert.match(html,/Панель тимчасово недоступна/);
+    assert.doesNotMatch(html,/id="admin-login"|id="admin-dashboard"/);
+    const accounts=await request('/api/commerce?op=admin-subscribers');
+    assert.equal(accounts.status,503);
+    assert.doesNotMatch(await accounts.text(),/test-only outage/);
+  }
 });
 
 test('Preview signup, roles and signed-in management use real database state',async t=>{
