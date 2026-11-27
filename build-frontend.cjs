@@ -74,7 +74,7 @@ const analyticsDebug = !process.env.VERCEL && !vercelEnvironment && process.env.
 const analyticsMode = analyticsLive ? 'live' : analyticsDebug ? 'debug' : '';
 const analyticsScript = '<script src="/analytics.js" defer></script>';
 const campaignIds = (process.env.SLX_GA_CAMPAIGN_IDS ?? '').split(',').map(value=>value.trim());
-const analyticsTag = analyticsMode ? `<meta name="slx-analytics" content="${analyticsMode}">
+const analyticsTag = file => analyticsMode ? `<meta name="slx-analytics" content="${analyticsMode}" data-path="/${escape(file)}">
 <meta name="slx-campaign-ids" content="${campaignIds.filter(value=>/^[a-z0-9][a-z0-9_-]{0,47}$/.test(value)).join(',')}">` : '';
 
 if (!localPages) {
@@ -153,7 +153,7 @@ const home = readFileSync(path.join(root, 'index.html'), 'utf8')
   .replace(/  <link rel="stylesheet" href="style.css">\s*<link rel="stylesheet" href="commerce.css">\s*<link rel="stylesheet" href="drop.css">/,
     storefrontStyles)
   .replace(/  <!-- SEO origin start -->[\s\S]*?  <!-- SEO origin end -->/, () =>
-    `  <!-- SEO origin start -->\n${homeCanonical}  ${shareImage()}\n${fulfillmentMeta}\n${previewSignupMeta}\n${analyticsTag}\n  <!-- SEO origin end -->`)
+    `  <!-- SEO origin start -->\n${homeCanonical}  ${shareImage()}\n${fulfillmentMeta}\n${previewSignupMeta}\n${analyticsTag('')}\n  <!-- SEO origin end -->`)
   .replace('</head>', `${analyticsScript}\n</head>`)
   .replace(/<!-- SITE HEADER START -->[\s\S]*?<!-- SITE HEADER END -->/, () => `<!-- SITE HEADER START -->\n${header(true)}\n<!-- SITE HEADER END -->`)
   .replace(/<!-- SITE FOOTER START -->[\s\S]*?<!-- SITE FOOTER END -->/, () => `<!-- SITE FOOTER START -->\n${footer(settings)}\n<!-- SITE FOOTER END -->`)
@@ -178,7 +178,7 @@ for (const [file, page] of Object.entries(pages)) {
 ${indexable ? `<link rel="canonical" href="${url(file)}">\n<meta property="og:url" content="${url(file)}">` : '<meta name="robots" content="noindex">'}
 ${fulfillmentMeta}
 ${previewSignupMeta}
-${page.analytics === false ? '' : analyticsTag}
+${page.analytics === false ? '' : analyticsTag(file)}
 <meta property="og:type" content="website">
 <meta property="og:locale" content="en_GB">
 <meta property="og:site_name" content="SLX Division">

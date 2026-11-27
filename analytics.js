@@ -10,9 +10,15 @@
   try { choice = localStorage.getItem(key); } catch {}
   let started = false;
   const destinations = new Set(['slxdivision.myspreadshop.co.uk']);
+  const socialReferrers = {
+    'youtube.com':'youtube.com', 'youtu.be':'youtube.com',
+    'tiktok.com':'tiktok.com', 'pinterest.com':'pinterest.com', 'pin.it':'pinterest.com',
+    'instagram.com':'instagram.com', 'facebook.com':'facebook.com', 't.me':'t.me',
+  };
 
   function pageLocation() {
-    const url = new URL(location.pathname === '/index.html' ? '/' : location.pathname, location.origin);
+    const path = document.querySelector('meta[name="slx-analytics"]')?.dataset.path ?? '/';
+    const url = new URL(path, location.origin);
     const query = new URLSearchParams(location.search);
     const campaignIds = (document.querySelector('meta[name="slx-campaign-ids"]')?.content ?? '').split(',');
     const publicTags = new Set(['google','instagram','facebook','pinterest','tiktok','telegram','youtube','newsletter','slx','organic','social','bio','video','pin',
@@ -36,7 +42,10 @@
     let referrer = '';
     try {
       const source = new URL(document.referrer);
-      if (['https:','http:'].includes(source.protocol)) referrer = source.origin + '/';
+      const host = source.hostname.replace(/^(?:www\.|m\.|l\.|lm\.|vm\.|vt\.)/, '');
+      if (source.protocol === 'https:' && Object.hasOwn(socialReferrers,host)) {
+        referrer = `https://${socialReferrers[host]}/`;
+      }
     } catch {}
     const locationParams = {page_location:pageLocation(),page_referrer:referrer};
     gtag('set',{...locationParams,ads_data_redaction:true,
@@ -89,6 +98,7 @@
       return;
     }
     window[disabled] = true;
+    if (started) window.gtag('consent','update',denied);
     clearCookies();
     if (started) location.reload();
   }

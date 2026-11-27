@@ -139,7 +139,10 @@ test('browser verifies Preview signup, responsive management and local GA consen
   let deliveries=0;
   await page.route('https://www.googletagmanager.com/**',route=>{deliveries++;return route.fulfill({body:'',contentType:'text/javascript'});});
   await page.route('https://www.youtube.com/**',route=>route.abort());
-  await page.goto(`${origin}/?utm_source=instagram&utm_medium=social&utm_campaign=drop001&email=private@example.test`);
+  await page.goto(`${origin}/?utm_source=youtube&utm_medium=social&utm_campaign=drop001&utm_content=video&email=private@example.test#private@example.test`,{
+    referer:'https://www.youtube.com/watch?email=referrer@example.test',
+  });
+  assert.equal(deliveries,0);
   await page.getByRole('button',{name:'Reject',exact:true}).click();
   assert.equal(deliveries,0);
   await page.getByRole('button',{name:'Cookie settings'}).click();
@@ -176,11 +179,38 @@ test('browser verifies Preview signup, responsive management and local GA consen
   assert.equal(events.filter(entry=>entry[0]==='event' && entry[1]==='page_view').length,0);
   const pageView=pageConfig[0][2];
   assert.equal(pageView.debug_mode,true);
-  assert.match(pageView.page_location,/utm_source=instagram/);
-  assert.doesNotMatch(JSON.stringify(events),/private@example.test|phase7-news@example.test/);
+  assert.equal(pageView.page_location,`${origin}/?utm_source=youtube&utm_medium=social&utm_campaign=drop001&utm_content=video`);
+  assert.equal(pageView.page_referrer,'https://youtube.com/');
+  assert.equal(pageView.allow_google_signals,false);
+  assert.equal(pageView.allow_ad_personalization_signals,false);
+  assert.doesNotMatch(JSON.stringify(events),/private@example.test|phase7-news@example.test|referrer@example.test/);
+  for (const [source,placement] of [['tiktok','bio'],['pinterest','pin']]) {
+    await page.goto(`${origin}/product-blind-seraph-tee.html?utm_source=${source}&utm_medium=social&utm_campaign=drop001&utm_content=${placement}&utm_term=person%40example.test`,{
+      referer:'https://personal-looking.example.test/account',
+    });
+    const commands=await page.evaluate(()=>window.dataLayer.map(entry=>Array.from(entry)));
+    const configs=commands.filter(entry=>entry[0]==='config');
+    assert.equal(configs.length,1);
+    assert.equal(configs[0][2].page_location,`${origin}/product-blind-seraph-tee.html?utm_source=${source}&utm_medium=social&utm_campaign=drop001&utm_content=${placement}`);
+    assert.equal(configs[0][2].page_referrer,'');
+    assert.equal(commands.filter(entry=>entry[0]==='event' && entry[1]==='view_item').length,1);
+  }
+  await page.waitForFunction(()=>document.querySelector('script[src*="googletagmanager.com/gtag/js"]'));
+  await page.evaluate(()=>{
+    document.cookie='_ga=test-only; Path=/';
+    document.cookie='_ga_FS55E1QPDN=test-only; Path=/';
+    window.addEventListener('beforeunload',()=>{
+      const consent=window.dataLayer.filter(entry=>entry[0]==='consent').at(-1)[2];
+      sessionStorage.setItem('test-revocation',JSON.stringify({consent,disabled:window['ga-disable-G-FS55E1QPDN']}));
+    },{once:true});
+  });
   await page.getByRole('button',{name:'Cookie settings'}).click();
   await page.getByRole('button',{name:'Reject',exact:true}).click();
   await page.waitForFunction(()=>!window.dataLayer && localStorage.getItem('slx-analytics-consent-v1')==='denied');
-  assert.equal(deliveries,1);
+  const withdrawal=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('test-revocation')));
+  assert.equal(withdrawal.disabled,true);
+  assert.deepEqual(Object.values(withdrawal.consent),['denied','denied','denied','denied']);
+  assert.equal((await page.context().cookies()).some(cookie=>cookie.name.startsWith('_ga')),false);
+  assert.equal(deliveries,3);
   assert.deepEqual(failures,[]);
 });
