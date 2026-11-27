@@ -1,5 +1,7 @@
 # Local administration
 
+The SLX Management Console uses the existing Manrope typeface with IBM Plex Mono for navigation groups and timestamps. The graphite surfaces, silver controls and red active marker are scoped to `/admin`. The sidebar collapses on desktop and opens as a drawer on mobile. Use `Ctrl+K` or `⌘K` to search sections available to your role. Press `Esc` to close drawers and previews.
+
 In PowerShell 7, run from the repository. Choose a unique password between 20 and 128 characters and keep it in your password manager.
 
 ```powershell

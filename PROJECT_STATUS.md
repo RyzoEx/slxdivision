@@ -1,5 +1,9 @@
 # Phase 7 status
 
+## Phase 7.1 catalogue reconciliation
+
+The Products screen reads six existing SLX records from `content/catalog.json`: four Heavy DAngels tees, Orbit Thorn Cap, and Halo & Horns Beanie. The planned Spreadshop assortment is four tees and four hoodies. There are no local hoodie records or verified Spreadshop product IDs in the approved source. The partner catalogue is inactive, so the eight items are a plan and have not been reconciled against live availability. Verify partner IDs and inventory after approved access. Preserve the two local accessory records until their disposition is confirmed.
+
 | Component | Status | Dependencies | External blocker | Next action |
 |---|---|---|---|---|
 | Pre-launch storefront | Branch build | Vercel Preview | No production approval | Verify Preview and retain COMING SOON |

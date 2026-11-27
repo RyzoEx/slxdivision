@@ -21,7 +21,7 @@ test('browser verifies Preview signup, responsive management and local GA consen
   const password='test-only random-looking credential 0793';
   await provisionPreviewStaff(db,email,'owner',password);
   const handle=commerce({db,auth:previewAuth(db),env:previewEnv,local:true});
-  const mime={html:'text/html',css:'text/css',js:'text/javascript',webp:'image/webp',mp4:'video/mp4',png:'image/png',woff2:'font/woff2'};
+  const mime={html:'text/html',css:'text/css',js:'text/javascript',webp:'image/webp',mp4:'video/mp4',png:'image/png',woff2:'font/woff2',svg:'image/svg+xml'};
   const server=createServer(async(req,res)=>{
     const url=new URL(req.url,origin);
     if (url.pathname==='/admin' || url.pathname==='/api/commerce') {
@@ -34,10 +34,10 @@ test('browser verifies Preview signup, responsive management and local GA consen
       return;
     }
     const file=url.pathname==='/' ? 'index.html' : url.pathname.slice(1);
-    if (!/^(?:[\w-]+\/)*[\w.-]+\.(?:html|css|js|webp|mp4|png|woff2)$/.test(file)) {res.writeHead(404).end();return;}
+    if (!/^(?:[\w-]+\/)*[\w.-]+\.(?:html|css|js|webp|mp4|png|woff2|svg)$/.test(file)) {res.writeHead(404).end();return;}
     try {
       const data=await readFile(resolve('dist',file));
-      res.writeHead(200,{'content-type':mime[file.split('.').at(-1)]}).end(data);
+      res.writeHead(200,{'content-type':mime[file.split('.').at(-1)],'content-length':data.length}).end(req.method==='HEAD'?undefined:data);
     } catch {res.writeHead(404).end();}
   });
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -65,38 +65,73 @@ test('browser verifies Preview signup, responsive management and local GA consen
   await page.getByLabel('Пароль').fill(password);
   await page.getByRole('button',{name:'Увійти'}).click();
   await page.getByText('Попит за дизайнами').waitFor();
+  async function go(label) {
+    const mobile=page.getByRole('button',{name:'Відкрити навігацію'});
+    if (await mobile.isVisible()) {await mobile.click();await page.locator('#admin-mobile-nav').getByRole('button',{name:label,exact:true}).click();}
+    else await page.locator('#admin-navigation').getByRole('button',{name:label,exact:true}).click();
+    await page.locator('#admin-panel h1').getByText(label==='Огляд'?'Огляд SLX Division':label,{exact:true}).waitFor();
+    await page.waitForFunction(()=>document.querySelector('#admin-panel').getAttribute('aria-busy')==='false');
+  }
+  await page.getByRole('button',{name:'Згорнути панель'}).click();
+  assert.equal(await page.locator('#admin-navigation').evaluate(node=>node.offsetWidth),64);
+  await page.getByRole('button',{name:'Розгорнути панель'}).click();
+  await page.keyboard.press('Control+k');
+  await page.getByRole('searchbox',{name:'Знайти розділ'}).fill('Підписники');
+  await page.keyboard.press('Enter');
+  await page.getByRole('table',{name:'Підписники SLX'}).waitFor();
+  await go('Огляд');
   if (output) await page.screenshot({path:resolve(output,'slx-admin-desktop.png'),fullPage:true});
-  for (const [slug,label] of [['overview','Огляд'],['subscribers','Підписники'],['collections','Колекції'],['designs','Дизайни'],
-    ['website','Вебсайт'],['media','Медіатека'],['email','Листи'],['social','Соцмережі'],['system','Система']]) {
+  for (const [slug,label] of [['overview','Огляд'],['analytics','Аналітика'],['subscribers','Підписники'],['collections','Колекції'],['designs','Дизайни'],
+    ['website','Вебсайт'],['media','Медіатека'],['email','Листи'],['social','Соцмережі'],['system','Система'],['products','Товари'],['orders','Замовлення'],
+    ['customers','Клієнти'],['finance','Фінанси'],['referrals','SLX Circle'],['manufacturing','Виробництво'],['partners','Виробники'],['settings','Налаштування']]) {
     for (const width of [1440,390]) {
       await page.setViewportSize({width,height:920});
-      await page.getByRole('button',{name:label,exact:true}).click();
-      await page.getByRole('heading',{name:label,exact:true}).first().waitFor();
-      if (slug==='designs') await page.locator('#admin-panel details > summary').first().click();
+      await go(label);
+      if (slug==='finance') await page.getByText('Звіт за період',{exact:true}).waitFor();
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),width);
       if (output) await page.screenshot({path:resolve(output,`${slug}-${width}.png`),fullPage:true});
     }
   }
   await page.setViewportSize({width:390,height:844});
-  await page.getByRole('button',{name:'Підписники',exact:true}).click();
+  await go('Підписники');
   await page.getByText('e2e-preview@example.test').waitFor();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),390);
   if (output) await page.screenshot({path:resolve(output,'slx-admin-mobile.png'),fullPage:true});
+  const actions=page.getByLabel('Дії підписника');
+  await actions.click();await page.getByRole('button',{name:'Історія згоди'}).click();
+  await page.getByRole('dialog',{name:'Історія згоди'}).waitFor();
+  await page.keyboard.press('Escape');
+  if (!(await page.getByRole('button',{name:'Видалити…',exact:true}).isVisible())) await actions.click();
   await page.getByText('Видалити…',{exact:true}).click();
   await page.keyboard.press('Escape');
   await page.getByText('e2e-preview@example.test').waitFor();
+  if (!(await page.getByRole('button',{name:'Видалити…',exact:true}).isVisible())) await actions.click();
   await page.getByText('Видалити…',{exact:true}).click();
   await page.getByRole('button',{name:'Підтвердити видалення'}).click();
   await page.getByText('Записів за цими фільтрами немає.').waitFor();
-  await page.getByRole('button',{name:'Система',exact:true}).click();
-  await page.getByText(/Підключено/).waitFor();
-  await page.getByRole('button',{name:'Вебсайт',exact:true}).click();
+  await go('Система');
+  await page.getByText('Локальна база',{exact:true}).waitFor();
+  await go('Колекції');
+  await page.getByRole('button',{name:'Редагувати',exact:true}).click();
+  await page.getByLabel('Slug',{exact:true}).waitFor();
+  await page.keyboard.press('Escape');
+  await go('Листи');
+  await page.getByRole('button',{name:'Переглянути лист'}).first().click();
+  await page.getByRole('button',{name:'Mobile'}).click();
+  assert.equal(await page.locator('.console-email-preview').evaluate(node=>node.classList.contains('is-mobile')),true);
+  await page.keyboard.press('Escape');
+  await go('Вебсайт');
   await page.getByLabel('Hero',{exact:true}).fill('Phase 7 test draft');
   await page.getByRole('button',{name:'Переглянути чернетку',exact:true}).click();
   await page.getByRole('heading',{name:'Phase 7 test draft',exact:true}).waitFor();
   await page.getByRole('button',{name:'Зберегти чернетку'}).click();
   await page.getByText('Збережено.',{exact:true}).waitFor();
-  await page.getByRole('button',{name:'Вийти'}).click();
+  for (const width of [360,390,768,1024,1440,1920]) {
+    await page.setViewportSize({width,height:840});
+    await go('Огляд');
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),width);
+  }
+  await page.getByRole('button',{name:'Вийти',exact:true}).click();
   await page.getByLabel('Пароль').waitFor();
   assert.equal((await page.request.get(`${origin}/api/commerce?op=admin-subscribers`)).status(),401);
 

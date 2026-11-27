@@ -34,6 +34,7 @@ const types = {
   '.jpeg': 'image/jpeg', '.png': 'image/png', '.avif': 'image/avif',
   '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml',
   '.mp4': 'video/mp4', '.webm': 'video/webm',
+  '.svg': 'image/svg+xml',
 };
 function headersFor(pathname) {
   const matched = config.headers.filter(rule => rule.source === '/(.*)' || rule.source === pathname);

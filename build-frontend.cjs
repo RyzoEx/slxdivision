@@ -86,12 +86,14 @@ if (!localPages) {
     rmSync(output, { recursive: true });
   }
   mkdirSync(output);
-  for (const file of ['style.css', 'commerce.css', 'drop.css', 'artwork.js', 'commerce-client.js', 'account.js', 'admin-ui.js', 'intro-start.js', 'metrics.js', 'experience.js', 'metrics.html', '404.html', 'storefront.js', 'catalog-ui.js', 'analytics.js']) {
+  for (const file of ['style.css', 'commerce.css', 'drop.css', 'admin.css', 'artwork.js', 'commerce-client.js', 'account.js', 'admin-components.js', 'admin-ui.js', 'intro-start.js', 'metrics.js', 'experience.js', 'metrics.html', '404.html', 'storefront.js', 'catalog-ui.js', 'analytics.js']) {
     const source = path.join(root,file);
     const loader = path.extname(file).slice(1);
     if (loader === 'html') copyFileSync(source,path.join(output,file));
     else writePage(file,transformSync(readFileSync(source,'utf8'),{loader,minify:true,legalComments:'none'}).code);
   }
+  mkdirSync(path.join(output,'assets','admin'),{recursive:true});
+  for (const file of ['lucide.svg','LICENSE-Lucide.txt']) copyFileSync(path.join(root,'assets','admin',file),path.join(output,'assets','admin',file));
   const combined = separateStyles.map(file=>readFileSync(path.join(root,file),'utf8')).join('\n');
   writePage('site.css',transformSync(combined,{loader:'css',minify:true,legalComments:'none'}).code);
   if (spreadshop?.frame) copyFileSync(path.join(root,'spreadshop','bridge.js'),path.join(output,'spreadshop-bridge.js'));

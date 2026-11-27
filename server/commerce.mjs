@@ -38,8 +38,11 @@ function adminMetadata(user, config, items, env, auth) {
     user, statuses, sales:config.sales && readyForSale(config,items,env), modeReady:readyForSale(config,items,env),
     storageReady:auth.storageReady, canNotify:launchMailReady(env),
     fulfillment:spreadshop.usesSpreadshop(env) ? 'spreadshop' : 'direct',
-    telegramReady:telegramReady(env),preview:env.VERCEL_ENV==='preview',
+    telegramReady:telegramReady(env),preview:env.VERCEL_ENV==='preview',environment:localEnvironment(env),
   };
+}
+function localEnvironment(env) {
+  return env.VERCEL ? env.VERCEL_ENV ?? 'production' : 'local';
 }
 
 export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch }) {
@@ -68,7 +71,7 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
         return new Response(adminPage(isAdmin(user)),{
           status:user && !isAdmin(user) ? 403 : 200,
           headers:{...baseHeaders,'Content-Type':'text/html; charset=utf-8',
-            'Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'"},
+            'Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; media-src 'self'; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'"},
         });
       }
       if (op === 'catalog' && get) {
@@ -159,7 +162,9 @@ export function commerce({ db, auth, env=process.env, local=false, fetcher=fetch
           return json({backend:'ok',database:'connected',latencyMs:Math.round(performance.now()-started),
             version:'7.0.0',commit:/^[a-f0-9]{7,40}$/.test(env.VERCEL_GIT_COMMIT_SHA ?? '') ? env.VERCEL_GIT_COMMIT_SHA : null,
             checkedAt:new Date().toISOString(),email:launchMailReady(env)?'configured':'off',
-            environment:env.VERCEL_ENV ?? 'local',spreadshop:env.VERCEL_ENV==='production' && spreadshop.launchApproved(env),
+            environment:localEnvironment(env),storageReady:Boolean(auth.storageReady && env.SLX_MEDIA_STORAGE_APPROVED==='1'),
+            mailApproved:env.SLX_LAUNCH_MAIL_APPROVED==='1',productionSignup:env.VERCEL_ENV==='production' && env.SLX_LAUNCH_SIGNUP_READY==='1',
+            spreadshop:env.VERCEL_ENV==='production' && spreadshop.launchApproved(env),
             analytics:env.VERCEL_ENV==='production' && env.SLX_GA_STREAM_READY==='1',
             previewSignup:env.VERCEL_ENV==='preview' && env.SLX_PREVIEW_SIGNUP==='1'});
         }
